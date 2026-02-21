@@ -1,0 +1,106 @@
+/* --- NAVBAR --- */
+.navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    height: 80px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 8%;
+    background-color: var(--bg-color);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+  }
+  
+  .logo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  
+  .logo span { color: var(--primary); }
+  
+  .nav-links {
+    display: flex;
+    list-style: none;
+    gap: 30px;
+  }
+  
+  .nav-links a {
+    text-decoration: none;
+    color: var(--text-dark);
+    font-weight: 500;
+    transition: 0.3s;
+  }
+  
+  .nav-links a:hover, .nav-links a.active {
+    color: var(--primary);
+  }
+  
+  .btn-login {
+    padding: 10px 20px;
+    border: 1px solid var(--primary);
+    background: transparent;
+    color: var(--primary);
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  
+  .btn-login:hover {
+    background: var(--primary);
+    color: white;
+  }
+  @media screen and (max-width: 768px) {
+    body {
+      overflow-x: hidden; /* Évite le scroll horizontal quand le menu sort */
+    }
+  
+    .nav-links {
+      position: absolute;
+      right: 0px;
+      height: 92vh;
+      top: 80px;
+      background-color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 70%; /* Le menu prend 70% de la largeur */
+      transform: translateX(100%); /* Caché à droite */
+      transition: transform 0.5s ease-in;
+      box-shadow: -5px 0 15px rgba(0,0,0,0.05);
+    }
+  
+    .nav-links li {
+      opacity: 0;
+      margin: 20px 0;
+    }
+  
+    .hamburger {
+      display: block; /* Visible sur mobile */
+    }
+  
+    /* État Ouvert */
+    .nav-links.open {
+      transform: translateX(0%);
+    }
+  
+    .nav-links.open li {
+      opacity: 1;
+      transition: opacity 0.5s ease 0.2s;
+    }
+  
+    /* Animation du Burger en "X" */
+    .hamburger.toggle .line1 {
+      transform: rotate(-45deg) translate(-5px, 6px);
+    }
+    .hamburger.toggle .line2 {
+      opacity: 0;
+    }
+    .hamburger.toggle .line3 {
+      transform: rotate(45deg) translate(-5px, -6px);
+    }
+  }
