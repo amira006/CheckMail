@@ -1,13 +1,13 @@
 import React from "react";
 import "./App.css";
-import Navbar from "./navBar";
+import NavBar from "./navBar";
 import HeroSection from "./heroSection";
 import Footer from "./footer";
 
 function App() {
   return (
     <>
-      <Navbar />
+      <NavBar />
       <HeroSection />
       <Footer />
     </>
