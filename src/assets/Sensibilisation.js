@@ -60,4 +60,4 @@ function Sensibilisation() {
   );
 }
 
-export default Sensibilsation;
+export default Sensibilisation;
