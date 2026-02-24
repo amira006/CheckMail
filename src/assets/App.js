@@ -3,12 +3,16 @@ import "./App.css";
 import NavBar from "./navBar";
 import HeroSection from "./heroSection";
 import Footer from "./footer";
-
+import Sensibilisation from "./assets/Sensibilisation";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 function App() {
   return (
     <>
       <NavBar />
-      <HeroSection />
+      <Routes>
+        <Route path="/" element={<HeroSection />} />
+        <Route path="/sensibilisation" element={<Sensibilisation />} />
+      </Routes>
       <Footer />
     </>
   );
