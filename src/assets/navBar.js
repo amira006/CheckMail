@@ -1,29 +1,40 @@
 import React from "react";
 import "./App.css";
 import "./Navbar.css";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+
 function Navbar() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   return (
     <nav className="navbar">
-      <div className="logo">
-        Secure<span>Mail</span>
-      </div>
+      <Link to="/" style={{ textDecoration: 'none' }}>
+        <div className="logo">Secure<span>Mail</span></div>
+      </Link>
+
       <ul className="nav-links">
         <li>
-          <Link to="/">Home</Link>
+          <Link to="/" className={location.pathname === '/' ? 'active' : ''}>
+            Home
+          </Link>
         </li>
         <li>
-          <a href="#analyze">Analyze</a>
+          <Link to="/analyze" className={location.pathname === '/analyze' || location.pathname === '/results' ? 'active' : ''}>
+            Analyse
+          </Link>
         </li>
         <li>
-          <Link to="/sensibilisation">Sensibilisation</Link>
-        </li>
-        <li>
-          <a href="#contact">Contact</a>
+          <Link to="/sensibilisation" className={location.pathname === '/sensibilisation' ? 'active' : ''}>
+            Sensibilisation
+          </Link>
         </li>
       </ul>
+
       <div className="nav-auth">
-        <button className="btn-login">Connexion</button>
+        <button className="btn-login" onClick={() => navigate('/login')}>
+          Connexion
+        </button>
       </div>
     </nav>
   );

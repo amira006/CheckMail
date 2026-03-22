@@ -1,8 +1,12 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import "./App.css";
 import Robot from "./robot-removebg-preview.png";
 import "./heroSection.css";
+
 function HeroSection() {
+  const navigate = useNavigate();
+
   return (
     <main className="hero-container">
       <div className="hero-text">
@@ -18,14 +22,17 @@ function HeroSection() {
         </p>
 
         <div className="cta-wrapper">
-          <button className="main-cta">Analyser un Email</button>
-          <button className="secondary-cta">Comment ça marche ?</button>
+          <button className="main-cta" onClick={() => navigate('/analyze')}>
+            Analyser un Email
+          </button>
+          <button className="secondary-cta">
+            Comment ça marche ?
+          </button>
         </div>
       </div>
 
       <div className="hero-visual">
         <div className="robot-wrapper">
-          {/* Assure-toi que l'image est dans le dossier 'public' ou importée */}
           <img src={Robot} alt="Mascotte SecureMail" className="robot-image" />
           <div className="floor-shadow"></div>
         </div>
