@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historique des Emails — MailGuard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="historique.css">
+</head>
+<body>
+
+  <!-- ══════════════════════════════════
+       HEADER
+  ══════════════════════════════════ -->
+  <header>
+    <a class="logo" href="#">
+      <div class="logo-icon">📧</div>
+      <span class="logo-text">Mail<span>Guard</span></span>
+    </a>
+    <nav>
+      <a href="#">Tableau de bord</a>
+      <a href="#" class="active">Historique</a>
+      <a href="#">Paramètres</a>
+    </nav>
+  </header>
+
+  <!-- ══════════════════════════════════
+       PAGE PRINCIPALE
+  ══════════════════════════════════ -->
+  <div class="page">
+
+    <!-- Titre de la page -->
+    <div class="page-header">
+      <div class="page-title">
+        Historique des Emails
+        <span>Tous les emails analysés par le système</span>
+      </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="stats-bar">
+      <div class="stat-card total">
+        <span class="stat-label">Total analysés</span>
+        <span class="stat-value" id="stat-total">0</span>
+      </div>
+      <div class="stat-card clean">
+        <span class="stat-label">Propres</span>
+        <span class="stat-value" id="stat-clean">0</span>
+      </div>
+      <div class="stat-card infected">
+        <span class="stat-label">Infectés</span>
+        <span class="stat-value" id="stat-infected">0</span>
+      </div>
+      <div class="stat-card suspect">
+        <span class="stat-label">Suspects</span>
+        <span class="stat-value" id="stat-suspect">0</span>
+      </div>
+    </div>
+
+    <!-- Barre de recherche et filtres -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input
+          class="search-input"
+          type="text"
+          id="search"
+          placeholder="Rechercher par expéditeur, sujet…"
+          oninput="renderTable()"
+        >
+      </div>
+      <select class="filter-select" id="filterStatus" onchange="renderTable()">
+        <option value="">Tous les statuts</option>
+        <option value="Propre">Propre</option>
+        <option value="Infecté">Infecté</option>
+        <option value="Suspect">Suspect</option>
+        <option value="En cours">En cours</option>
+      </select>
+      <select class="filter-select" id="filterSort" onchange="renderTable()">
+        <option value="date-desc">Plus récents</option>
+        <option value="date-asc">Plus anciens</option>
+        <option value="score-desc">Score menace ↓</option>
+        <option value="score-asc">Score menace ↑</option>
+      </select>
+    </div>
+
+    <!-- Tableau des emails -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Expéditeur</th>
+            <th>Sujet</th>
+            <th>Date reçu</th>
+            <th>Taille</th>
+            <th>Statut</th>
+            <th>Score menace</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="emailTableBody"></tbody>
+      </table>
+      <div class="pagination">
+        <span class="page-info" id="pageInfo"></span>
+        <div class="page-btns" id="pageBtns"></div>
+      </div>
+    </div>
+
+  </div><!-- fin .page -->
+
+  <!-- ══════════════════════════════════
+       MODAL — Rapport d'analyse
+  ══════════════════════════════════ -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="modalTitle">Rapport d'analyse</div>
+          <div class="modal-subtitle" id="modalSubtitle"></div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+
+      <div class="modal-body" id="modalBody"></div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeModal()">Fermer</button>
+        <button class="btn-primary" onclick="printReport()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path d="M6 9V2h12v7"/>
+            <rect x="6" y="14" width="12" height="8"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          </svg>
+          Imprimer le rapport
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="historique.js"></script>
+</body>
+</html>
