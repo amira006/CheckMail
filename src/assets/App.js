@@ -9,6 +9,7 @@ import Results from './Results';
 import Login from './Login';
 import Signup from './Signup';
 import ForgotPassword from './ForgotPassword';
+import Historique from './Historique';
 import './App.css';
 
 export default function App() {
@@ -17,26 +18,26 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-
         {/* Auth pages — no navbar/footer */}
         <Route path="/login"           element={<Login />} />
         <Route path="/signup"          element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* Main app pages — with navbar + footer */}
+        {/* Main pages — with navbar + footer */}
         <Route path="*" element={
-          <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+          <div style={{ display:'flex', flexDirection:'column', minHeight:'100vh' }}>
             <Navbar />
             <Routes>
-              <Route path="/" element={<HeroSection />} />
+              <Route path="/"              element={<HeroSection />} />
               <Route path="/sensibilisation" element={<Sensibilisation />} />
-              <Route path="/analyze" element={
+              <Route path="/historique"    element={<Historique />} />
+              <Route path="/analyze"       element={
                 <Upload onAnalyze={(data) => {
                   setEmlData(data);
                   window.location.href = '/results';
                 }} />
               } />
-              <Route path="/results" element={
+              <Route path="/results"       element={
                 <Results
                   emlData={emlData}
                   onNewEmail={() => { window.location.href = '/analyze'; }}
@@ -46,7 +47,6 @@ export default function App() {
             <Footer />
           </div>
         } />
-
       </Routes>
     </BrowserRouter>
   );
