@@ -1,0 +1,112 @@
+/* ── NAVBAR ── */
+.navbar {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 6%;
+  background-color: #ffffff;
+  z-index: 1000;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+/* ── LOGO ── */
+.nav-logo {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #1e293b;
+  text-decoration: none;
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+}
+
+.nav-logo span {
+  color: #5465ff;
+}
+
+/* ── NAV LINKS ── */
+.nav-links {
+  display: flex;
+  list-style: none;
+  gap: 36px;
+  align-items: center;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: color 0.2s;
+  white-space: nowrap;
+  background: transparent;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+  color: #5465ff;
+}
+
+/* ── BUTTON ── */
+.btn-login {
+  padding: 9px 22px;
+  border: 1.5px solid #5465ff;
+  background: transparent;
+  color: #5465ff;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.btn-login:hover {
+  background: #5465ff;
+  color: white;
+}
+
+/* ── MOBILE ── */
+@media screen and (max-width: 768px) {
+  .navbar {
+    padding: 0 5%;
+  }
+
+  .nav-links {
+    position: absolute;
+    right: 0;
+    top: 60px;
+    background: #ffffff;
+    flex-direction: column;
+    align-items: center;
+    width: 70%;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.08);
+    padding: 24px 0;
+    gap: 20px;
+  }
+
+  .nav-links.open {
+    transform: translateX(0%);
+  }
+}
+
+/* ── 🔥 REMOVE BLUE BOX COMPLETELY ── */
+a,
+a:focus,
+a:active,
+a:visited,
+a:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* remove mobile tap highlight */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
