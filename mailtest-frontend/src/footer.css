@@ -1,0 +1,95 @@
+/* --- FOOTER STYLES --- */
+.footer {
+  background-color: #0f172a; /* Anthracite profond */
+  color: #f8fafc;
+  padding: 60px 8% 20px 8%;
+  margin-top: 50px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.footer-container {
+  display: flex;
+  justify-content: flex-start; /* alignement gauche */
+  align-items: center; /* aligne verticalement p et logo */
+  flex-wrap: wrap;
+  gap: 40px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 40px;
+}
+
+.footer-brand {
+  display: flex;           /* nouvelle ligne */
+  align-items: space between;     /* centré verticalement */
+  gap: 20px;               /* espace entre logo et texte */
+  flex: 1;
+  min-width: 250px;
+}
+
+.footer-brand .logo {
+  color: #ffffff;
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.footer-brand .logo span {
+  color: #3b82f6; /* Accent color pour le "Mail" */
+}
+
+
+.footer-brand p {
+  color: #94a3b8;
+  line-height: 1.4;
+  font-size: 0.95rem;
+  margin: 0;              /* supprime marge par défaut */
+  max-width: 400px;       /* limite largeur pour lisibilité */
+}
+
+/* Footer bottom */
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 20px;
+  font-size: 0.85rem;
+  color: #64748b;
+  flex-wrap: wrap;
+}
+
+.footer-bottom p {
+  margin: 0;
+}
+
+/* Social icons simplifiés */
+.social-icons {
+  display: flex;
+  gap: 20px;
+}
+
+.social-icons span {
+  cursor: pointer;
+  transition: 0.3s;
+  font-size: 1.2rem;
+}
+
+.social-icons span:hover {
+  color: #3b82f6; /* Accent color */
+}
+
+/* --- RESPONSIVE FOOTER --- */
+@media (max-width: 768px) {
+  .footer-container {
+      flex-direction: column;
+      text-align: center;
+  }
+
+  .footer-brand p {
+      margin: 0 auto;
+  }
+
+  .footer-bottom {
+      flex-direction: column;
+      gap: 10px;
+      text-align: center;
+  }
+}

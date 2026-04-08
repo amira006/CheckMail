@@ -1,0 +1,367 @@
+/* ═══════════════════════════════════════════════
+   HISTORIQUE.CSS — Email Analysis History
+   Matches app design system (primary #2563EB,
+   glass cards, Segoe UI, smooth transitions)
+   ═══════════════════════════════════════════════ */
+
+/* ── Wrapper principal ── */
+.hist-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 60px 5% 80px;
+    animation: fadeInUp 0.5s ease both;
+  }
+  
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  
+  /* ── Header ── */
+  .hist-header {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 36px;
+  }
+  
+  .hist-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    line-height: 1.1;
+  }
+  
+  .hist-count {
+    font-size: 0.85rem;
+    font-weight: 700;
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--primary);
+    padding: 4px 12px;
+    border-radius: 50px;
+  }
+  
+  /* ── États vides / chargement ── */
+  .hist-loading,
+  .hist-empty {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-gray);
+    font-size: 1rem;
+  }
+  
+  .hist-empty p::before {
+    content: "📭";
+    display: block;
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+  }
+  
+  /* ── Liste ── */
+  .hist-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  
+  /* ── Carte email ── */
+  .hist-card {
+    background: var(--glass);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+    overflow: hidden;
+    transition: box-shadow 0.25s, transform 0.25s;
+  }
+  
+  .hist-card:hover {
+    box-shadow: 0 8px 28px rgba(37, 99, 235, 0.1);
+    transform: translateY(-2px);
+  }
+  
+  .hist-card.open {
+    box-shadow: 0 8px 32px rgba(37, 99, 235, 0.15);
+    border-color: rgba(37, 99, 235, 0.25);
+  }
+  
+  /* ── Ligne principale ── */
+  .hist-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    cursor: pointer;
+    gap: 16px;
+  }
+  
+  .hist-card-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .hist-card-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  
+  /* ── Infos texte ── */
+  .hist-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+  
+  .hist-filename {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .hist-subject {
+    font-size: 0.82rem;
+    color: var(--text-gray);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .hist-date {
+    font-size: 0.75rem;
+    color: #94a3b8;
+  }
+  
+  /* ── Badges verdict ── */
+  .hist-verdict {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 13px;
+    border-radius: 50px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  
+  .hist-verdict.safe {
+    background: rgba(22, 163, 74, 0.1);
+    color: #15803d;
+  }
+  
+  .hist-verdict.warn {
+    background: rgba(234, 179, 8, 0.12);
+    color: #a16207;
+  }
+  
+  .hist-verdict.danger {
+    background: rgba(193, 18, 31, 0.1);
+    color: var(--red);
+  }
+  
+  /* ── Score ── */
+  .hist-score {
+    font-size: 1.1rem;
+    font-weight: 700;
+    min-width: 36px;
+    text-align: center;
+  }
+  
+  .hist-score.safe   { color: #15803d; }
+  .hist-score.warn   { color: #a16207; }
+  .hist-score.danger { color: var(--red); }
+  
+  /* ── Bouton Chat ── */
+  .hist-btn-chat {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+    white-space: nowrap;
+  }
+  
+  .hist-btn-chat:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+  }
+  
+  /* ── Bouton Supprimer ── */
+  .hist-btn-delete {
+    background: transparent;
+    color: var(--red);
+    border: 1px solid rgba(193, 18, 31, 0.2);
+    padding: 7px 10px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+    line-height: 1;
+  }
+  
+  .hist-btn-delete:hover:not(:disabled) {
+    background: rgba(193, 18, 31, 0.08);
+    transform: scale(1.1);
+  }
+  
+  .hist-btn-delete:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  
+  /* ── Panneau Chat ── */
+  .hist-chat {
+    border-top: 1px solid rgba(226, 232, 240, 0.7);
+    background: rgba(248, 250, 252, 0.6);
+    padding: 20px;
+    animation: slideDown 0.25s ease both;
+  }
+  
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  
+  .hist-chat-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-gray);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  .hist-chat-loading,
+  .hist-chat-empty {
+    text-align: center;
+    color: var(--text-gray);
+    font-size: 0.9rem;
+    padding: 24px 0;
+  }
+  
+  /* ── Messages ── */
+  .hist-chat-msgs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 4px;
+    scroll-behavior: smooth;
+  }
+  
+  .hist-chat-msgs::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  .hist-chat-msgs::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .hist-chat-msgs::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  
+  /* ── Bulle message ── */
+  .hist-msg {
+    display: flex;
+    flex-direction: column;
+    max-width: 75%;
+  }
+  
+  .hist-msg.user {
+    align-self: flex-end;
+    align-items: flex-end;
+  }
+  
+  .hist-msg.assistant {
+    align-self: flex-start;
+    align-items: flex-start;
+  }
+  
+  .hist-msg-sender {
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-gray);
+  }
+  
+  .hist-msg-bub {
+    padding: 11px 15px;
+    border-radius: 14px;
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+  
+  .hist-msg.user .hist-msg-bub {
+    background: var(--primary);
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+  
+  .hist-msg.assistant .hist-msg-bub {
+    background: white;
+    color: var(--text-dark);
+    border: 1px solid #e2e8f0;
+    border-bottom-left-radius: 4px;
+  }
+  
+  .hist-msg-bub ul {
+    margin: 6px 0 6px 18px;
+  }
+  
+  .hist-msg-bub li {
+    margin-bottom: 3px;
+  }
+  
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .hist-wrap {
+      padding: 40px 4% 60px;
+    }
+  
+    .hist-header h1 {
+      font-size: 1.5rem;
+    }
+  
+    .hist-card-top {
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+  
+    .hist-card-left {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+  
+    .hist-card-right {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  
+    .hist-msg {
+      max-width: 90%;
+    }
+  
+    .hist-btn-chat {
+      font-size: 0.75rem;
+      padding: 7px 12px;
+    }
+  }
