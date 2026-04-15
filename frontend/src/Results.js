@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import "./Results.css";
-import { saveAnalysis, getHistory } from "./emailService";
+import { saveAnalysis } from "./emailService";
 import { saveMessage, getChatHistory } from "./chatService";
 
 function decodeMimeHeader(str) {
@@ -105,30 +105,6 @@ function BotIcon() {
   );
 }
 
-function HistIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
-    </svg>
-  );
-}
-
-const VERDICT_MAP = {
-  SAFE: { cls: "safe", icon: "✅" },
-  SUSPICIOUS: { cls: "warn", icon: "⚠️" },
-  DANGEROUS: { cls: "danger", icon: "🔴" },
-};
-
 export default function Results({ emlData, onBack }) {
   const [report, setReport] = useState(null);
   const [msgs, setMsgs] = useState([]);
@@ -139,15 +115,7 @@ export default function Results({ emlData, onBack }) {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [emailId, setEmailId] = useState(null);
 
-  const [histOpen, setHistOpen] = useState(false);
-  const [histEmails, setHistEmails] = useState([]);
-  const [histLoading, setHistLoading] = useState(false);
-  const [openedId, setOpenedId] = useState(null);
-  const [openedMsgs, setOpenedMsgs] = useState([]);
-  const [openedLoading, setOpenedLoading] = useState(false);
-
   const msgsRef = useRef();
-  const histMsgsRef = useRef();
 
   const meta = emlData?.content
     ? {
@@ -175,11 +143,6 @@ export default function Results({ emlData, onBack }) {
   }, [msgs, typing]);
 
   useEffect(() => {
-    if (histMsgsRef.current)
-      histMsgsRef.current.scrollTop = histMsgsRef.current.scrollHeight;
-  }, [openedMsgs]);
-
-  useEffect(() => {
     if (!emlData?.content) {
       setMsgs([
         {
@@ -193,43 +156,6 @@ export default function Results({ emlData, onBack }) {
     }
     runAnalysis();
   }, []); // eslint-disable-line
-
-  // ── Historique sidebar ─────────────────────────────────────────────────
-  const loadHist = async () => {
-    setHistLoading(true);
-    try {
-      const data = await getHistory(1, 30);
-      setHistEmails(data.emails || []);
-    } catch (_) {
-      setHistEmails([]);
-    } finally {
-      setHistLoading(false);
-    }
-  };
-
-  const toggleHist = () => {
-    const next = !histOpen;
-    setHistOpen(next);
-    if (next && histEmails.length === 0) loadHist();
-  };
-
-  const openHistChat = async (id) => {
-    if (openedId === id) {
-      setOpenedId(null);
-      setOpenedMsgs([]);
-      return;
-    }
-    setOpenedId(id);
-    setOpenedLoading(true);
-    try {
-      const msgs = await getChatHistory(id);
-      setOpenedMsgs(msgs);
-    } catch (_) {
-      setOpenedMsgs([]);
-    } finally {
-      setOpenedLoading(false);
-    }
-  };
 
   // ── Analyse ────────────────────────────────────────────────────────────
   const runAnalysis = async () => {
@@ -270,48 +196,7 @@ export default function Results({ emlData, onBack }) {
 
       if (rep) setReport(rep);
 
-      if (rep) {
-        saveAnalysis(emlData.name, rep, meta)
-          .then(async (saved) => {
-            if (saved?.id) {
-              setEmailId(saved.id);
-              // ── تحميل الـ chat history الموجود ──
-              try {
-                const oldMsgs = await getChatHistory(saved.id);
-                if (oldMsgs.length > 0) {
-                  // نحول الـ messages القديمة لـ format الـ chat
-                  const formattedOld = oldMsgs.map((m) => ({
-                    role: m.role === "user" ? "user" : "bot",
-                    text: m.content,
-                    chips: [],
-                  }));
-                  setMsgs((prev) => [...prev, ...formattedOld]);
-                  // نحدث الـ history للـ context
-                  setHistory((prev) => [
-                    ...prev,
-                    ...oldMsgs.map((m) => ({
-                      role: m.role === "user" ? "user" : "assistant",
-                      content: m.content,
-                    })),
-                  ]);
-                }
-              } catch (_) {}
-            }
-          })
-          .catch(() => {});
-      }
-
-      // ── Calcul couleur et verdict pour le message ──────────────────
       const sc = rep?.score ?? null;
-      const color =
-        sc === null
-          ? "#94a3b8"
-          : sc >= 70
-          ? "#22c55e"
-          : sc >= 40
-          ? "#f59e0b"
-          : "#ef4444";
-
       const vLabel =
         rep?.verdict === "SAFE"
           ? "Email sûr "
@@ -346,7 +231,7 @@ export default function Results({ emlData, onBack }) {
         extraMsg = extraMsg.replace(/CHIPS:.*/, "").trim();
       }
 
-      setHistory([
+      const baseContext = [
         {
           role: "user",
           content: `[CTX] ${JSON.stringify(rep)} ${emlData.content.substring(
@@ -355,12 +240,8 @@ export default function Results({ emlData, onBack }) {
           )}`,
         },
         { role: "assistant", content: "Prêt." },
-      ]);
+      ];
 
-      setTyping(false);
-      setBusy(false);
-
-      // ── Message de bienvenue avec résultat ─────────────────────────
       const welcomeText = rep
         ? `Bonjour ! 👋 J'ai analysé votre email **${
             emlData?.name || ""
@@ -373,7 +254,53 @@ export default function Results({ emlData, onBack }) {
           `Posez-moi vos questions sur cet email 👇`
         : `Bonjour ! L'analyse est terminée. Posez-moi vos questions 👇`;
 
-      setMsgs([{ role: "bot", text: welcomeText, chips }]);
+      setTyping(false);
+      setBusy(false);
+
+      if (!rep) {
+        setMsgs([{ role: "bot", text: welcomeText, chips }]);
+        setHistory(baseContext);
+        return;
+      }
+
+      // ── ✅ Sauvegarde + chargement historique ──────────────────────
+      try {
+        const saved = await saveAnalysis(emlData.name, rep, meta);
+        const savedId = saved?.id || null;
+        setEmailId(savedId);
+
+        if (savedId) {
+          const oldMsgs = await getChatHistory(savedId);
+
+          if (oldMsgs?.length > 0) {
+            // ✅ Historique existant → reprend la conversation
+            setMsgs(
+              oldMsgs.map((m) => ({
+                role: m.role === "user" ? "user" : "bot",
+                text: m.content,
+                chips: [],
+              }))
+            );
+            setHistory([
+              ...baseContext,
+              ...oldMsgs.map((m) => ({
+                role: m.role === "user" ? "user" : "assistant",
+                content: m.content,
+              })),
+            ]);
+          } else {
+            // ✅ Pas d'historique → message de bienvenue
+            setMsgs([{ role: "bot", text: welcomeText, chips }]);
+            setHistory(baseContext);
+          }
+        } else {
+          setMsgs([{ role: "bot", text: welcomeText, chips }]);
+          setHistory(baseContext);
+        }
+      } catch (_) {
+        setMsgs([{ role: "bot", text: welcomeText, chips }]);
+        setHistory(baseContext);
+      }
     } catch (e) {
       setTyping(false);
       setBusy(false);
@@ -531,224 +458,126 @@ export default function Results({ emlData, onBack }) {
           <table className="rp-table">
             <tbody>
               <tr>
-                <td>Fichier</td> <td>{emlData?.name || "—"}</td>
+                <td>Fichier</td>
+                <td>{emlData?.name || "—"}</td>
               </tr>
               <tr>
-                <td>Expéditeur</td>{" "}
+                <td>Expéditeur</td>
                 <td style={{ wordBreak: "break-all" }}>{meta.from || "—"}</td>
               </tr>
               <tr>
-                <td>Objet</td>{" "}
+                <td>Objet</td>
                 <td style={{ wordBreak: "break-word", whiteSpace: "normal" }}>
                   {meta.subject || "—"}
                 </td>
               </tr>
               <tr>
-                <td>Liens</td>{" "}
+                <td>Liens</td>
                 <td>{meta.links > 0 ? `${meta.links} lien(s)` : "Aucun"}</td>
               </tr>
               <tr>
-                <td>Pièces jointes</td>{" "}
+                <td>Pièces jointes</td>
                 <td>
                   {meta.attach > 0 ? `${meta.attach} pièce(s)` : "Aucune"}
                 </td>
               </tr>
               <tr>
-                <td>Date</td> <td>{meta.date || "—"}</td>
+                <td>Date</td>
+                <td>{meta.date || "—"}</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* ── Panneau droit : sidebar + chat ── */}
-      <div className="rp-chat-wrap">
-        {/* ── Sidebar historique ── */}
-        <div className={`rp-hist-sidebar ${histOpen ? "open" : ""}`}>
-          <div className="rp-hist-header">
-            <span> Historique</span>
-            <button
-              className="rp-hist-close"
-              onClick={() => setHistOpen(false)}
-            >
-              ✕
-            </button>
+      {/* ── Chat panel ── */}
+      <div className="rp-chat">
+        <div className="rp-chat-topbar">
+          <div className="rp-chat-topbar-icon">
+            <BotIcon />
           </div>
-          <div className="rp-hist-body">
-            {histLoading ? (
-              <div className="rp-hist-empty">Chargement…</div>
-            ) : histEmails.length === 0 ? (
-              <div className="rp-hist-empty">Aucune analyse.</div>
-            ) : (
-              histEmails.map((em) => {
-                const v = VERDICT_MAP[em.verdict] || {
-                  cls: "warn",
-                };
-                const isOpen = openedId === em._id;
-                return (
-                  <div key={em._id} className="rp-hist-item">
-                    <div
-                      className={`rp-hist-row ${isOpen ? "active" : ""}`}
-                      onClick={() => openHistChat(em._id)}
-                    >
-                      <span className="rp-hist-icon">{v.icon}</span>
-                      <div className="rp-hist-info">
-                        <span className="rp-hist-fname">{em.filename}</span>
-                        <span className="rp-hist-date">
-                          {new Date(em.createdAt).toLocaleDateString("fr-FR", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </span>
-                      </div>
-                      <span className={`rp-hist-score ${v.cls}`}>
-                        {em.score}
-                      </span>
-                    </div>
-
-                    {isOpen && (
-                      <div className="rp-hist-chat">
-                        {openedLoading ? (
-                          <div
-                            className="rp-hist-empty"
-                            style={{ padding: "12px 0" }}
-                          >
-                            Chargement…
-                          </div>
-                        ) : openedMsgs.length === 0 ? (
-                          <div
-                            className="rp-hist-empty"
-                            style={{ padding: "12px 0" }}
-                          >
-                            Aucun message.
-                          </div>
-                        ) : (
-                          <div className="rp-hist-msgs" ref={histMsgsRef}>
-                            {openedMsgs.map((m, i) => (
-                              <div key={i} className={`rp-hist-msg ${m.role}`}>
-                                <span className="rp-hist-msg-sender">
-                                  {m.role === "user" ? "Vous" : "AI"}
-                                </span>
-                                <div
-                                  className="rp-hist-msg-bub"
-                                  dangerouslySetInnerHTML={{
-                                    __html: parseMarkdown(m.content),
-                                  }}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
+          <div className="rp-chat-topbar-info">
+            <h3>CheckMail</h3>
+            <p>
+              <span className="rp-dot" /> En ligne
+            </p>
           </div>
+          {(typing || busy) && (
+            <span className="rp-thinking">Analyse en cours…</span>
+          )}
         </div>
 
-        {/* ── Chat panel ── */}
-        <div className="rp-chat">
-          {/* Topbar */}
-          <div className="rp-chat-topbar">
+        <div className="rp-msgs" ref={msgsRef}>
+          {msgs.map((m, i) => (
+            <div key={i} className={`rp-msg ${m.role}`}>
+              <div className="rp-msg-inner">
+                <div className="rp-msg-avatar">
+                  {m.role === "bot" ? <BotIcon /> : "V"}
+                </div>
+                <div className="rp-msg-content">
+                  <div className="rp-msg-sender">
+                    {m.role === "bot" ? "CheckMail" : "Vous"}
+                  </div>
+                  <div
+                    className="rp-bub"
+                    dangerouslySetInnerHTML={{ __html: parseMarkdown(m.text) }}
+                  />
+                  {m.chips?.length > 0 && (
+                    <div className="rp-chips">
+                      {m.chips.map((c, j) => (
+                        <button
+                          key={j}
+                          className="rp-chip"
+                          onClick={() => setInput(c)}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {typing && (
+            <div className="rp-msg bot">
+              <div className="rp-msg-inner">
+                <div className="rp-msg-avatar">
+                  <BotIcon />
+                </div>
+                <div className="rp-msg-content">
+                  <div className="rp-msg-sender">CheckMail</div>
+                  <div className="rp-tdots">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="rp-input-area">
+          <div className="rp-input-box">
+            <input
+              className="rp-input"
+              value={input}
+              disabled={busy}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              placeholder="Posez votre question sur cet email…"
+            />
             <button
-              className={`rp-hist-btn ${histOpen ? "active" : ""}`}
-              onClick={toggleHist}
-              title="Historique"
+              className="rp-send"
+              onClick={sendMessage}
+              disabled={busy || !input.trim()}
             >
-              <HistIcon />
+              <SendIcon />
             </button>
-            <div className="rp-chat-topbar-icon">
-              <BotIcon />
-            </div>
-            <div className="rp-chat-topbar-info">
-              <h3>CheckMail</h3>
-              <p>
-                <span className="rp-dot" /> En ligne
-              </p>
-            </div>
-            {(typing || busy) && (
-              <span className="rp-thinking">Analyse en cours…</span>
-            )}
           </div>
-
-          {/* Messages */}
-          <div className="rp-msgs" ref={msgsRef}>
-            {msgs.map((m, i) => (
-              <div key={i} className={`rp-msg ${m.role}`}>
-                <div className="rp-msg-inner">
-                  <div className="rp-msg-avatar">
-                    {m.role === "bot" ? <BotIcon /> : "V"}
-                  </div>
-                  <div className="rp-msg-content">
-                    <div className="rp-msg-sender">
-                      {m.role === "bot" ? "CheckMail" : "Vous"}
-                    </div>
-                    <div
-                      className="rp-bub"
-                      dangerouslySetInnerHTML={{
-                        __html: parseMarkdown(m.text),
-                      }}
-                    />
-                    {m.chips?.length > 0 && (
-                      <div className="rp-chips">
-                        {m.chips.map((c, j) => (
-                          <button
-                            key={j}
-                            className="rp-chip"
-                            onClick={() => setInput(c)}
-                          >
-                            {c}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-            {typing && (
-              <div className="rp-msg bot">
-                <div className="rp-msg-inner">
-                  <div className="rp-msg-avatar">
-                    <BotIcon />
-                  </div>
-                  <div className="rp-msg-content">
-                    <div className="rp-msg-sender">CheckMail</div>
-                    <div className="rp-tdots">
-                      <span />
-                      <span />
-                      <span />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Input */}
-          <div className="rp-input-area">
-            <div className="rp-input-box">
-              <input
-                className="rp-input"
-                value={input}
-                disabled={busy}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                placeholder="Posez votre question sur cet email…"
-              />
-              <button
-                className="rp-send"
-                onClick={sendMessage}
-                disabled={busy || !input.trim()}
-              >
-                <SendIcon />
-              </button>
-            </div>
-            <p className="rp-input-hint">Appuyez sur Entrée pour envoyer</p>
-          </div>
+          <p className="rp-input-hint">Appuyez sur Entrée pour envoyer</p>
         </div>
       </div>
     </div>

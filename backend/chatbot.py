@@ -168,15 +168,19 @@ Vérifications     :
 {checks_txt}
 """
 
-    system_instruction = f"""Tu es un expert en cybersécurité pour CheckMail.
-Aide l'utilisateur à comprendre les risques de cet email en français.
+    system_instruction = f"""You are a cybersecurity expert for CheckMail.
+Help the user understand the risks of this email.
+IMPORTANT: Always reply in the SAME LANGUAGE the user writes in.
+- User writes in French → reply in French
+- User writes in English → reply in English
+- User writes in Arabic → reply in Arabic
 {report_ctx}
-Extrait de l'email :
+Email extract:
 ---
-{email_content[:2000] if email_content else '(non disponible)'}
+{email_content[:2000] if email_content else '(unavailable)'}
 ---
-Réponds de manière courte et claire. HTML simple autorisé (<b>, <br>, <ul><li>).
-N'affiche JAMAIS de JSON dans ta réponse."""
+Keep answers short and clear. Basic HTML allowed (<b>, <br>, <ul><li>).
+NEVER display raw JSON in your reply."""
 
     groq_messages = [{"role": "system", "content": system_instruction}]
     for m in messages:
