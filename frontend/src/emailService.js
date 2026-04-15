@@ -1,17 +1,24 @@
-// ── emailService.js ───────────────────────────────────────────────────────
-// Sauvegarde les résultats d'analyse en MongoDB via le backend Node.js
-
 import { getToken } from "./authService";
 
 const AUTH_API = "/auth-api";
 
-// ── Sauvegarder une analyse en base ───────────────────────────────────────
-export async function saveAnalysis(emlName, report, meta) {
+async function hashContent(text) {
+  const buffer = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(text)
+  );
+  return Array.from(new Uint8Array(buffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+export async function saveAnalysis(emlName, report, meta, emlContent) {
   const token = getToken();
-  if (!token) return null; // pas connecté → pas de sauvegarde
+  if (!token) return null;
 
   try {
-    // Mapper le verdict Flask → verdict MongoDB
+    const contentHash = await hashContent(emlContent || emlName || "");
+
     const verdictMap = {
       SAFE: "Propre",
       SUSPICIOUS: "Suspect",
@@ -20,6 +27,7 @@ export async function saveAnalysis(emlName, report, meta) {
 
     const body = {
       filename: emlName || "email.eml",
+      contentHash,
       score: report?.score ?? 0,
       verdict: verdictMap[report?.verdict] || "Suspect",
       subject: meta?.subject || "",
@@ -46,14 +54,13 @@ export async function saveAnalysis(emlName, report, meta) {
 
     if (!res.ok) return null;
     const data = await res.json();
-    return data.data; // { id, filename, status }
+    return data.data;
   } catch (e) {
-    console.warn("Sauvegarde BD échouée (non bloquant):", e.message);
+    console.warn("Sauvegarde BD échouée:", e.message);
     return null;
   }
 }
 
-// ── Récupérer l'historique ─────────────────────────────────────────────────
 export async function getHistory(page = 1, limit = 10) {
   const token = getToken();
   if (!token) return { emails: [], pagination: {} };
@@ -66,7 +73,6 @@ export async function getHistory(page = 1, limit = 10) {
   return data.success ? data.data : { emails: [], pagination: {} };
 }
 
-// ── Supprimer une analyse ──────────────────────────────────────────────────
 export async function deleteAnalysis(id) {
   const token = getToken();
   if (!token) return false;
@@ -79,7 +85,6 @@ export async function deleteAnalysis(id) {
   return data.success;
 }
 
-// ── Statistiques ───────────────────────────────────────────────────────────
 export async function getStats() {
   const token = getToken();
   if (!token) return null;
@@ -91,7 +96,6 @@ export async function getStats() {
   return data.success ? data.data : null;
 }
 
-// ── Helpers internes ───────────────────────────────────────────────────────
 function _extractAuth(checks = [], proto) {
   const c = checks.find((c) => c.message?.toUpperCase().includes(proto));
   if (!c) return "unknown";

@@ -157,7 +157,6 @@ export default function Results({ emlData, onBack }) {
     runAnalysis();
   }, []); // eslint-disable-line
 
-  // ── Analyse ────────────────────────────────────────────────────────────
   const runAnalysis = async () => {
     setTyping(true);
     setBusy(true);
@@ -263,9 +262,13 @@ export default function Results({ emlData, onBack }) {
         return;
       }
 
-      // ── ✅ Sauvegarde + chargement historique ──────────────────────
       try {
-        const saved = await saveAnalysis(emlData.name, rep, meta);
+        const saved = await saveAnalysis(
+          emlData.name,
+          rep,
+          meta,
+          emlData.content
+        );
         const savedId = saved?.id || null;
         setEmailId(savedId);
 
@@ -273,14 +276,15 @@ export default function Results({ emlData, onBack }) {
           const oldMsgs = await getChatHistory(savedId);
 
           if (oldMsgs?.length > 0) {
-            // ✅ Historique existant → reprend la conversation
-            setMsgs(
-              oldMsgs.map((m) => ({
+            // ✅ message de bienvenue + historique
+            setMsgs([
+              { role: "bot", text: welcomeText, chips },
+              ...oldMsgs.map((m) => ({
                 role: m.role === "user" ? "user" : "bot",
                 text: m.content,
                 chips: [],
-              }))
-            );
+              })),
+            ]);
             setHistory([
               ...baseContext,
               ...oldMsgs.map((m) => ({
@@ -289,7 +293,7 @@ export default function Results({ emlData, onBack }) {
               })),
             ]);
           } else {
-            // ✅ Pas d'historique → message de bienvenue
+            // ✅ pas d'historique → message de bienvenue seulement
             setMsgs([{ role: "bot", text: welcomeText, chips }]);
             setHistory(baseContext);
           }
@@ -314,7 +318,6 @@ export default function Results({ emlData, onBack }) {
     }
   };
 
-  // ── Send message ───────────────────────────────────────────────────────
   const sendMessage = useCallback(async () => {
     const text = input.trim();
     if (!text || typing) return;
@@ -362,7 +365,6 @@ export default function Results({ emlData, onBack }) {
     }
   }, [input, typing, report, history, emlData, emailId]);
 
-  // ── Download PDF ───────────────────────────────────────────────────────
   const downloadPDF = async () => {
     if (!report) return alert("L'analyse n'est pas encore terminée.");
     setPdfBusy(true);
@@ -387,7 +389,6 @@ export default function Results({ emlData, onBack }) {
     }
   };
 
-  // ── Score & verdict ────────────────────────────────────────────────────
   const score = report?.score ?? null;
   const ringColor =
     score === null
@@ -410,7 +411,6 @@ export default function Results({ emlData, onBack }) {
 
   return (
     <div className="rp-wrap">
-      {/* ── Panneau gauche ── */}
       <div className="rp-left">
         <div className="rp-header">
           <div>
@@ -490,7 +490,6 @@ export default function Results({ emlData, onBack }) {
         </div>
       </div>
 
-      {/* ── Chat panel ── */}
       <div className="rp-chat">
         <div className="rp-chat-topbar">
           <div className="rp-chat-topbar-icon">
