@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-CheckMail — Groq Chatbot
-Double analyse : phishing_analyzer (heuristique) + LLaMA 3.3 (IA)
+CheckMail — Groq Chatbot (Optimised)
+Heuristic phishing analysis + lightweight AI explanation
 """
 
 import os
@@ -12,12 +12,20 @@ from dotenv import load_dotenv
 from phishing_analyzer import analyze as heuristic_analyze
 
 load_dotenv()
+
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
+MODEL = "llama-3.1-8b-instant"   # ⚡ faster + fewer tokens
 
-# ── Helpers ────────────────────────────────────────────────────────────────
+
+# ── Helpers ─────────────────────────────────────────────
+
+def _is_rate_limit(error: Exception) -> bool:
+    err = str(error)
+    return "429" in err or "rate_limit" in err.lower()
+
+
 def _verdict_map(raw_verdict: str) -> str:
-    """Convertit les verdicts heuristiques en SAFE / SUSPICIOUS / DANGEROUS."""
     return {
         "SAFE": "SAFE",
         "LOW_RISK": "SAFE",
@@ -32,78 +40,77 @@ def _format_checks(checks: list) -> str:
     for c in checks:
         icon = {"ok": "✔", "warn": "⚠", "danger": "✘"}.get(c.get("status"), "-")
         lines.append(
-            f"  {icon} [{c.get('category','?')}] {c.get('message','')} (+{c.get('points',0)} pts)"
+            f"{icon} {c.get('message','')} (+{c.get('points',0)})"
         )
-    return "\n".join(lines) if lines else "(aucune)"
+    return "\n".join(lines) if lines else "(none)"
 
 
 def _run_heuristic(eml_content: str) -> dict:
-    """Écrit le contenu dans un fichier tmp et lance l'analyseur heuristique."""
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="wb", suffix=".eml", delete=False
-        ) as tmp:
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".eml", delete=False) as tmp:
             tmp.write(eml_content.encode("utf-8", errors="replace"))
             tmp_path = tmp.name
+
         result = heuristic_analyze(tmp_path)
         os.unlink(tmp_path)
+
         return result
+
     except Exception as e:
         return {"score": 0, "verdict": "SAFE", "checks": [], "error": str(e)}
 
 
-# ── Analyse principale ─────────────────────────────────────────────────────
+# ── Email Analysis ──────────────────────────────────────
+
 def get_analysis(eml_content: str, eml_name: str = "email.eml") -> str:
-    """
-    Double analyse :
-      1. phishing_analyzer → checks techniques (SPF, DKIM, URLs…)
-      2. LLaMA 3.3 via Groq → enrichit le rapport avec ces données
-    Retourne un JSON string : {"report": {...}, "message": "html..."}
-    """
-    # ── Étape 1 : analyse heuristique ─────────────────────────────────────
+
     heuristic = _run_heuristic(eml_content)
+
     raw_score = heuristic.get("score", 0)
     safe_score = max(0, min(100, 100 - raw_score))
+
     verdict = _verdict_map(heuristic.get("verdict", "SAFE"))
     checks_txt = _format_checks(heuristic.get("checks", []))
     susp_urls = heuristic.get("suspicious_urls", [])
 
-    # ── Étape 2 : enrichissement IA ───────────────────────────────────────
-    prompt = f"""Tu es un expert en cybersécurité. Voici les résultats d'une analyse heuristique d'un email.
+    # ⚡ Optimised prompt
+    prompt = f"""
+Email security analysis.
 
-Fichier : {eml_name}
-Score de risque brut : {raw_score}/100 → Score de sécurité : {safe_score}/100
-Verdict heuristique  : {verdict}
-URLs suspectes       : {len(susp_urls)}
+File: {eml_name}
+Score: {safe_score}/100
+Verdict: {verdict}
+Suspicious URLs: {len(susp_urls)}
 
-Vérifications effectuées :
+Checks:
 {checks_txt}
 
-Extrait de l'email :
----
-{eml_content[:2500]}
----
+Email extract:
+{eml_content[:1200]}
 
-Génère un rapport de sécurité. Réponds EXACTEMENT dans ce format :
+Return EXACTLY:
 
 JSON_START
-{{"score": {safe_score}, "verdict": "{verdict}", "summary": "<1-2 phrases résumant le risque>", "recommendation": "<que faire concrètement>", "indicators": [<liste de 3-5 points clés string>]}}
+{{"score": {safe_score}, "verdict": "{verdict}", "summary": "", "recommendation": "", "indicators": []}}
 JSON_END
 
-Ensuite, donne une analyse courte en HTML simple (<b>, <br>, <ul><li>).
-NE répète PAS le JSON. NE mets PAS de titre "Analyse de l'email".
-Termine avec: CHIPS: <question1> | <question2> | <question3>"""
+Then give a short HTML explanation (<b>, <br>, <ul><li>).
+End with:
+CHIPS: question1 | question2 | question3
+"""
 
     try:
+
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=MODEL,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=900,
+            max_tokens=400
         )
+
         raw = response.choices[0].message.content
 
-        # Parser le JSON entre JSON_START / JSON_END
         rep = None
+
         if "JSON_START" in raw and "JSON_END" in raw:
             json_str = raw.split("JSON_START")[1].split("JSON_END")[0].strip()
             try:
@@ -111,88 +118,105 @@ Termine avec: CHIPS: <question1> | <question2> | <question3>"""
             except Exception:
                 pass
 
-        # Fallback si le JSON est malformé
         if not rep:
             rep = {
                 "score": safe_score,
                 "verdict": verdict,
-                "summary": heuristic.get("metadata", {}).get("subject", "Email analysé."),
-                "recommendation": "Vérifiez manuellement cet email.",
-                "indicators": [c["message"] for c in heuristic.get("checks", [])
-                               if c["status"] in ("warn", "danger")][:5],
+                "summary": "Email analysed.",
+                "recommendation": "Verify sender before interacting.",
+                "indicators": [
+                    c["message"] for c in heuristic.get("checks", [])
+                    if c["status"] in ("warn", "danger")
+                ][:5],
             }
 
-        # Nettoyer le message HTML (retirer le bloc JSON)
         clean = raw
+
         if "JSON_START" in raw and "JSON_END" in raw:
             before = raw.split("JSON_START")[0]
             after = raw.split("JSON_END")[1]
             clean = (before + after).strip()
 
-        # Ajouter les checks et URLs suspectes au rapport
         rep["checks"] = heuristic.get("checks", [])
         rep["suspicious_urls"] = susp_urls
 
         return json.dumps({"report": rep, "message": clean})
 
     except Exception as e:
-        # Fallback complet sans IA
+
+        if _is_rate_limit(e):
+            return json.dumps({"error": "rate_limit"})
+
         fallback_report = {
             "score": safe_score,
             "verdict": verdict,
-            "summary": f"Analyse heuristique uniquement (erreur IA : {str(e)[:60]}).",
-            "recommendation": "Soyez prudent avec cet email.",
-            "indicators": [c["message"] for c in heuristic.get("checks", [])
-                           if c["status"] in ("warn", "danger")][:5],
+            "summary": "Heuristic analysis only.",
+            "recommendation": "Be cautious with this email.",
+            "indicators": [
+                c["message"] for c in heuristic.get("checks", [])
+                if c["status"] in ("warn", "danger")
+            ][:5],
             "checks": heuristic.get("checks", []),
             "suspicious_urls": susp_urls,
         }
+
         return json.dumps({
             "report": fallback_report,
-            "message": f"⚠️ Analyse IA indisponible. Résultat heuristique : score {safe_score}/100, verdict {verdict}.",
+            "message": f"⚠️ AI unavailable. Heuristic result: score {safe_score}/100."
         })
 
 
-# ── Chat ───────────────────────────────────────────────────────────────────
+# ── Chatbot ─────────────────────────────────────────────
+
 def get_ai_reply(messages: list, email_content: str = "", report: dict = None) -> str:
-    """Répond aux questions de l'utilisateur en se basant sur le rapport."""
+
     report = report or {}
-    checks_txt = _format_checks(report.get("checks", []))
 
     report_ctx = f"""
-Score de sécurité : {report.get('score', '?')}/100
-Verdict           : {report.get('verdict', '?')}
-Résumé            : {report.get('summary', '?')}
-Recommandation    : {report.get('recommendation', '?')}
-Vérifications     :
-{checks_txt}
+Score: {report.get('score','?')}/100
+Verdict: {report.get('verdict','?')}
+Summary: {report.get('summary','?')}
+Recommendation: {report.get('recommendation','?')}
 """
 
-    system_instruction = f"""You are a cybersecurity expert for CheckMail.
-Help the user understand the risks of this email.
-IMPORTANT: Always reply in the SAME LANGUAGE the user writes in.
-- User writes in French → reply in French
-- User writes in English → reply in English
-- User writes in Arabic → reply in Arabic
+    system_instruction = f"""
+You are a cybersecurity assistant for CheckMail.
+
+Answer user questions about email risks.
+
+Reply in the SAME LANGUAGE as the user.
+
 {report_ctx}
+
 Email extract:
----
-{email_content[:2000] if email_content else '(unavailable)'}
----
-Keep answers short and clear. Basic HTML allowed (<b>, <br>, <ul><li>).
-NEVER display raw JSON in your reply."""
+{email_content[:800] if email_content else '(none)'}
+
+Keep answers short.
+Use simple HTML (<b>, <br>, <ul><li>).
+Never show JSON.
+"""
 
     groq_messages = [{"role": "system", "content": system_instruction}]
+
     for m in messages:
-        if not m.get("content", "").startswith("[CTX]"):
-            groq_messages.append({"role": m["role"], "content": m["content"]})
+        groq_messages.append({
+            "role": m["role"],
+            "content": m["content"]
+        })
 
     try:
+
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=MODEL,
             messages=groq_messages,
-            max_tokens=500,
+            max_tokens=300
         )
+
         return response.choices[0].message.content
+
     except Exception as e:
-        return f"Erreur : {str(e)}"
+
+        if _is_rate_limit(e):
+            return "__RATE_LIMIT__"
+
+        return f"Error: {str(e)}"

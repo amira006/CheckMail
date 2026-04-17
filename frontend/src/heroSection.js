@@ -22,10 +22,13 @@ function HeroSection() {
         </p>
 
         <div className="cta-wrapper">
-          <button className="main-cta" onClick={() => navigate('/analyze')}>
+          <button className="main-cta" onClick={() => navigate("/analyze")}>
             Analyser un Email
           </button>
-          <button className="secondary-cta">
+          <button
+            className="secondary-cta"
+            onClick={() => navigate("/sensibilisation")}
+          >
             Comment ça marche ?
           </button>
         </div>

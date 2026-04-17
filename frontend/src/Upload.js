@@ -1,4 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { getToken } from "./authService";
+import Forfaits from "./Forfaits";
 import "./Upload.css";
 
 // ── Icônes SVG ────────────────────────────────────────────────────────────────
@@ -17,7 +20,6 @@ const IconFolder = () => (
     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
   </svg>
 );
-
 const IconMail = () => (
   <svg
     width="32"
@@ -33,7 +35,6 @@ const IconMail = () => (
     <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
   </svg>
 );
-
 const IconCheckCircle = () => (
   <svg
     width="32"
@@ -49,7 +50,6 @@ const IconCheckCircle = () => (
     <path d="m9 12 2 2 4-4" />
   </svg>
 );
-
 const IconFile = () => (
   <svg
     width="18"
@@ -65,7 +65,6 @@ const IconFile = () => (
     <path d="M14 2v4a2 2 0 0 0 2 2h4" />
   </svg>
 );
-
 const IconX = () => (
   <svg
     width="14"
@@ -80,7 +79,6 @@ const IconX = () => (
     <path d="M18 6 6 18M6 6l12 12" />
   </svg>
 );
-
 const IconLightbulb = () => (
   <svg
     width="15"
@@ -97,7 +95,6 @@ const IconLightbulb = () => (
     <path d="M10 22h4" />
   </svg>
 );
-
 const IconCheck = () => (
   <svg
     width="13"
@@ -112,7 +109,6 @@ const IconCheck = () => (
     <path d="M20 6 9 17l-5-5" />
   </svg>
 );
-
 const IconClock = () => (
   <svg
     width="13"
@@ -128,7 +124,6 @@ const IconClock = () => (
     <path d="M12 6v6l4 2" />
   </svg>
 );
-
 const IconCircle = () => (
   <svg
     width="13"
@@ -146,7 +141,6 @@ const IconCircle = () => (
 
 // ── Wrappers designés ─────────────────────────────────────────────────────────
 
-/** Badge étape — icône bleue sur fond bleu pâle */
 const BadgeIcon = () => (
   <span
     style={{
@@ -165,7 +159,6 @@ const BadgeIcon = () => (
   </span>
 );
 
-/** Icône drop-zone — cercle avec halo coloré */
 const DropIcon = ({ done }) => (
   <span
     style={{
@@ -188,7 +181,6 @@ const DropIcon = ({ done }) => (
   </span>
 );
 
-/** Icône fichier — carré vert */
 const FileBoxIcon = () => (
   <span
     style={{
@@ -208,7 +200,6 @@ const FileBoxIcon = () => (
   </span>
 );
 
-/** Bouton suppression fichier */
 const RemoveBtn = ({ onClick }) => (
   <button
     className="file-remove"
@@ -242,7 +233,6 @@ const RemoveBtn = ({ onClick }) => (
   </button>
 );
 
-/** Icône ampoule — carré ambre */
 const HintIcon = () => (
   <span
     style={{
@@ -263,7 +253,6 @@ const HintIcon = () => (
   </span>
 );
 
-/** Icône step loading avec état coloré */
 const StepIcon = ({ state }) => {
   const styles = {
     done: {
@@ -306,13 +295,72 @@ const StepIcon = ({ state }) => {
   );
 };
 
-// ──────────────────────────────────────────────────────────────────────────────
+// ── Modal Forfaits ────────────────────────────────────────────────────────────
+
+const plans = [
+  {
+    id: "gratuit",
+    name: "Gratuit",
+    price: "0€",
+    period: "/mois",
+    color: "#6b7280",
+    features: [
+      "3 analyses / semaine",
+      "Score de sécurité",
+      "Détection phishing IA",
+      "Historique 7 jours",
+    ],
+    cta: "Plan actuel",
+    disabled: true,
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: "5€",
+    period: "/mois",
+    color: "#4f46e5",
+    popular: true,
+    features: [
+      "50 analyses / jour",
+      "Score de sécurité",
+      "Détection phishing IA",
+      "Historique illimité",
+      "Assistant IA prioritaire",
+      "Support email",
+    ],
+    cta: "Choisir Pro",
+    disabled: false,
+  },
+  {
+    id: "business",
+    name: "Business",
+    price: "20€",
+    period: "/mois",
+    color: "#059669",
+    features: [
+      "Analyses illimitées",
+      "Score de sécurité",
+      "Détection phishing IA",
+      "Historique illimité",
+      "Assistant IA prioritaire",
+      "Accès API",
+      "Support prioritaire 24/7",
+      "Tableau de bord équipe",
+    ],
+    cta: "Choisir Business",
+    disabled: false,
+  },
+];
+
+// ── Component Principal ───────────────────────────────────────────────────────
 
 export default function Upload({ onAnalyze }) {
   const [file, setFile] = useState(null);
   const [over, setOver] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
+  const [quota, setQuota] = useState(null);
+  const [showForfaits, setShowForfaits] = useState(false);
   const ref = useRef();
 
   const STEPS = [
@@ -321,6 +369,25 @@ export default function Upload({ onAnalyze }) {
     "Analyse du contenu…",
     "Génération du rapport…",
   ];
+
+  // ── Vérifier quota au chargement (lecture seule, pas d'incrément ici) ──
+  useEffect(() => {
+    const checkQuota = async () => {
+      try {
+        const res = await fetch("/auth-api/api/plan/check", {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        const data = await res.json();
+        if (data.success) {
+          setQuota(data.data);
+          if (!data.data.allowed) setShowForfaits(true);
+        }
+      } catch (err) {
+        console.error("Erreur quota:", err);
+      }
+    };
+    checkQuota();
+  }, []);
 
   const pick = (f) => {
     if (!f) return;
@@ -331,12 +398,52 @@ export default function Upload({ onAnalyze }) {
     setFile(f);
   };
 
-  const analyze = () => {
+  // ✅ SÉCURISÉ : Check + incrément atomique côté serveur AVANT de lancer l'analyse
+  const analyze = async () => {
     if (!file) return;
+
+    // ── Vérification serveur (atomique : check + incrément en une seule requête) ──
+    try {
+      const res = await fetch("/auth-api/api/plan/analyze", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        // Quota dépassé côté serveur → afficher modal
+        setShowForfaits(true);
+        // Mettre à jour l'état local pour refléter la réalité
+        setQuota((prev) =>
+          prev ? { ...prev, allowed: false, remaining: 0 } : prev
+        );
+        return;
+      }
+
+      // Mettre à jour l'affichage du quota restant
+      if (data.data) {
+        setQuota((prev) =>
+          prev
+            ? {
+                ...prev,
+                remaining: data.data.remaining,
+                analysisCount: data.data.analysisCount,
+                allowed: data.data.remaining > 0,
+              }
+            : prev
+        );
+      }
+    } catch (err) {
+      console.error("Erreur vérification quota:", err);
+      alert("Erreur de connexion. Veuillez réessayer.");
+      return;
+    }
+
+    // ── Lancer l'analyse seulement si le serveur a autorisé ──
     setLoading(true);
     setStep(0);
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const emlData = { content: e.target.result, name: file.name };
       let s = 0;
       const iv = setInterval(() => {
@@ -362,6 +469,9 @@ export default function Upload({ onAnalyze }) {
 
   return (
     <div className="upload-page">
+      {/* ✅ Modal forfaits */}
+      {showForfaits && <Forfaits onClose={() => setShowForfaits(false)} />}
+
       {/* Header */}
       <div className="upload-header">
         <div className="upload-badge">
@@ -374,11 +484,39 @@ export default function Upload({ onAnalyze }) {
           Chargez votre fichier .eml et laissez notre plateforme analyser les
           menaces de sécurité en quelques secondes.
         </p>
+
+        {/* ✅ Quota badge */}
+        {quota && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              marginTop: 12,
+              padding: "6px 14px",
+              borderRadius: 20,
+              background: quota.allowed
+                ? "rgba(34,197,94,.1)"
+                : "rgba(239,68,68,.1)",
+              border: `1px solid ${
+                quota.allowed ? "rgba(34,197,94,.3)" : "rgba(239,68,68,.3)"
+              }`,
+              fontSize: 13,
+              color: quota.allowed ? "#16a34a" : "#ef4444",
+              fontWeight: 500,
+            }}
+          >
+            {quota.allowed
+              ? `✓ ${quota.remaining} analyse${
+                  quota.remaining > 1 ? "s" : ""
+                } restante${quota.remaining > 1 ? "s" : ""} aujourd'hui`
+              : "✕ Limite atteinte — Passez à un forfait supérieur"}
+          </div>
+        )}
       </div>
 
       {/* Card */}
       <div className="upload-card">
-        {/* Drop zone */}
         <div
           className={`drop-zone ${over ? "over" : ""} ${file ? "done" : ""}`}
           onClick={() => ref.current.click()}
@@ -412,7 +550,6 @@ export default function Upload({ onAnalyze }) {
           </p>
         </div>
 
-        {/* Aperçu fichier */}
         {file && (
           <div className="file-preview">
             <FileBoxIcon />
@@ -431,7 +568,6 @@ export default function Upload({ onAnalyze }) {
           </div>
         )}
 
-        {/* Hint */}
         <div className="upload-hint">
           <HintIcon />
           <p>
@@ -441,7 +577,6 @@ export default function Upload({ onAnalyze }) {
           </p>
         </div>
 
-        {/* Bouton */}
         <button className="analyze-btn" disabled={!file} onClick={analyze}>
           Analyser cet email
         </button>

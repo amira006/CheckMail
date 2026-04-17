@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Results.css";
 import { saveAnalysis } from "./emailService";
 import { saveMessage, getChatHistory } from "./chatService";
@@ -106,6 +107,8 @@ function BotIcon() {
 }
 
 export default function Results({ emlData, onBack }) {
+  const navigate = useNavigate();
+
   const [report, setReport] = useState(null);
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState("");
@@ -138,10 +141,15 @@ export default function Results({ emlData, onBack }) {
     : {};
 
   useEffect(() => {
-    if (msgsRef.current)
+    if (msgsRef.current && msgs.length > 0) {
+      msgsRef.current.scrollTop = 0;
+    }
+  }, [emailId]);
+  useEffect(() => {
+    if (msgsRef.current) {
       msgsRef.current.scrollTop = msgsRef.current.scrollHeight;
-  }, [msgs, typing]);
-
+    }
+  }, [msgs]);
   useEffect(() => {
     if (!emlData?.content) {
       setMsgs([
@@ -171,6 +179,12 @@ export default function Results({ emlData, onBack }) {
       });
       if (!res.ok) throw new Error(`Erreur ${res.status}`);
       const data = await res.json();
+
+      // ── Détection rate limit ──────────────────────────────────────────
+      if (data.error === "rate_limit") {
+        navigate("/forfaits");
+        return;
+      }
 
       let rep = null;
       if (
@@ -205,14 +219,23 @@ export default function Results({ emlData, onBack }) {
           ? "Dangereux "
           : "Inconnu ";
 
-      let chips =
-        Array.isArray(data.chips) && data.chips.length
-          ? data.chips
-          : [
-              "Risque de phishing ?",
-              "Les liens sont-ils sûrs ?",
-              "Que faire maintenant ?",
-            ];
+      let chips;
+
+      if (rep?.score >= 70) {
+        chips = [
+          "Pourquoi il est sûr ?",
+          "Puis-je répondre ?",
+          "Détails techniques",
+        ];
+      } else if (rep?.score >= 40) {
+        chips = ["Pourquoi suspect ?", "Quels risques ?", "Que faire ?"];
+      } else {
+        chips = [
+          "Pourquoi dangereux ?",
+          "Supprimer email ?",
+          "Signaler phishing",
+        ];
+      }
 
       let extraMsg =
         typeof data.result === "string"
@@ -276,7 +299,6 @@ export default function Results({ emlData, onBack }) {
           const oldMsgs = await getChatHistory(savedId);
 
           if (oldMsgs?.length > 0) {
-            // ✅ message de bienvenue + historique
             setMsgs([
               { role: "bot", text: welcomeText, chips },
               ...oldMsgs.map((m) => ({
@@ -293,7 +315,6 @@ export default function Results({ emlData, onBack }) {
               })),
             ]);
           } else {
-            // ✅ pas d'historique → message de bienvenue seulement
             setMsgs([{ role: "bot", text: welcomeText, chips }]);
             setHistory(baseContext);
           }
@@ -348,6 +369,13 @@ export default function Results({ emlData, onBack }) {
       const data = await res.json();
       const reply = data.reply || "Désolé, veuillez réessayer.";
 
+      // ── Détection rate limit dans le chat ────────────────────────────
+      if (reply === "__RATE_LIMIT__") {
+        setTyping(false);
+        navigate("/forfaits");
+        return;
+      }
+
       setTyping(false);
       setMsgs((p) => [...p, { role: "bot", text: reply, chips: [] }]);
       setHistory((p) => [...p, { role: "assistant", content: reply }]);
@@ -363,7 +391,7 @@ export default function Results({ emlData, onBack }) {
         { role: "bot", text: `Erreur : ${e.message}`, chips: [] },
       ]);
     }
-  }, [input, typing, report, history, emlData, emailId]);
+  }, [input, typing, report, history, emlData, emailId, navigate]);
 
   const downloadPDF = async () => {
     if (!report) return alert("L'analyse n'est pas encore terminée.");
@@ -527,7 +555,10 @@ export default function Results({ emlData, onBack }) {
                         <button
                           key={j}
                           className="rp-chip"
-                          onClick={() => setInput(c)}
+                          onClick={() => {
+                            setInput(c);
+                            setTimeout(() => sendMessage(), 100);
+                          }}
                         >
                           {c}
                         </button>

@@ -1,0 +1,242 @@
+/* ── Overlay ──────────────────────────────────────────────────────────────── */
+.forfaits-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 25, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+/* ── Modal ────────────────────────────────────────────────────────────────── */
+.forfaits-modal {
+  background: #fff;
+  border-radius: 20px;
+  padding: 40px;
+  max-width: 900px;
+  width: 100%;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Close ────────────────────────────────────────────────────────────────── */
+.forfaits-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  font-size: 16px;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.forfaits-close:hover {
+  background: #e2e8f0;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.forfaits-header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.forfaits-limit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.forfaits-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 10px;
+}
+
+.forfaits-header p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* ── Cards grid ───────────────────────────────────────────────────────────── */
+.forfaits-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 700px) {
+  .forfaits-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .forfaits-modal {
+    padding: 28px 20px;
+  }
+}
+
+/* ── Card ─────────────────────────────────────────────────────────────────── */
+.forfait-card {
+  border: 2px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 28px 20px;
+  position: relative;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.forfait-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--plan-color);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.forfait-card.popular {
+  border-color: var(--plan-color);
+  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.15);
+}
+
+/* ── Badge Populaire ──────────────────────────────────────────────────────── */
+.forfait-badge {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #4f46e5;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Icon ─────────────────────────────────────────────────────────────────── */
+.forfait-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--plan-color) 12%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--plan-color) 25%, transparent);
+  color: var(--plan-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+/* ── Name & Price ─────────────────────────────────────────────────────────── */
+.forfait-card h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 8px;
+}
+
+.forfait-price {
+  margin-bottom: 20px;
+}
+
+.forfait-price .price {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--plan-color);
+}
+
+.forfait-price .period {
+  font-size: 14px;
+  color: #9ca3af;
+  margin-left: 4px;
+}
+
+/* ── Features ─────────────────────────────────────────────────────────────── */
+.forfait-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  flex: 1;
+}
+
+.forfait-features li {
+  font-size: 13px;
+  color: #374151;
+  padding: 6px 0;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.forfait-features li:last-child {
+  border-bottom: none;
+}
+
+.forfait-features li svg {
+  color: var(--plan-color);
+  flex-shrink: 0;
+}
+
+/* ── CTA Button ───────────────────────────────────────────────────────────── */
+.forfait-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  background: var(--plan-color);
+  color: white;
+  transition: opacity 0.2s, transform 0.15s;
+  margin-top: auto;
+}
+
+.forfait-btn:hover:not(.disabled) {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.forfait-btn:active:not(.disabled) {
+  transform: translateY(0);
+}
+
+.forfait-btn.disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+.forfaits-footer {
+  text-align: center;
+  margin-top: 24px;
+  margin-bottom: 0;
+  font-size: 12px;
+  color: #9ca3af;
+}

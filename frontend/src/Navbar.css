@@ -113,3 +113,271 @@ a:focus-visible {
 * {
   -webkit-tap-highlight-color: transparent;
 }
+/* ============================================================
+   AVATAR & DROPDOWN — append these to your existing Navbar.css
+   ============================================================ */
+
+/* ── Avatar button ── */
+.nav-avatar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 50px;
+  padding: 3px 8px 3px 3px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.nav-avatar-btn:hover,
+.nav-avatar-btn.open {
+  border-color: rgba(79, 70, 229, 0.4);
+  background: rgba(79, 70, 229, 0.06);
+}
+
+/* ── Avatar image (Google photo) ── */
+.nav-avatar-img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  border: 2px solid #e5e7eb;
+}
+
+/* ── Initials fallback ── */
+.nav-avatar-initials {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.5px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* ── Caret ── */
+.nav-avatar-caret {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1;
+  transition: transform 0.2s;
+}
+
+.nav-avatar-btn.open .nav-avatar-caret {
+  transform: rotate(180deg);
+}
+
+/* ── Wrapper (positioning context) ── */
+.nav-avatar-wrapper {
+  position: relative;
+}
+
+/* ── Avatar button ── */
+.nav-avatar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 50px;
+  padding: 3px 8px 3px 3px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.nav-avatar-btn:hover,
+.nav-avatar-btn.open {
+  border-color: rgba(79, 70, 229, 0.4);
+  background: rgba(79, 70, 229, 0.06);
+}
+
+/* ── Avatar image ── */
+.nav-avatar-img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  border: 2px solid #e5e7eb;
+}
+
+/* ── Initials fallback ── */
+.nav-avatar-initials {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.5px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* ── Caret ── */
+.nav-avatar-caret {
+  font-size: 11px;
+  color: #6b7280;
+  transition: transform 0.2s;
+}
+.nav-avatar-btn.open .nav-avatar-caret {
+  transform: rotate(180deg);
+}
+
+/* ── Dropdown panel ── */
+.nav-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 300px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.08);
+  z-index: 1000;
+  overflow: hidden;
+  animation: dropdownIn 0.18s ease;
+  border: 1px solid #e8eaed;
+}
+
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Header - Google style ── */
+.nav-dropdown-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 20px 18px;
+  background: #fff;
+  text-align: center;
+}
+
+/* ── Avatar large in header ── */
+.nav-dropdown-avatar-large {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 12px;
+  border: 2px solid #e8eaed;
+}
+
+.nav-dropdown-avatar-large .nav-avatar-img {
+  width: 72px;
+  height: 72px;
+  border: none;
+}
+
+.nav-dropdown-avatar-large .nav-avatar-initials {
+  width: 72px;
+  height: 72px;
+  font-size: 28px;
+  border-radius: 50%;
+}
+
+/* ── Greeting ── */
+.nav-dropdown-greeting {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+/* ── Email ── */
+.nav-dropdown-email {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 14px;
+}
+
+/* ── Plan Badge ── */
+.nav-plan-badge {
+  display: inline-block;
+  padding: 5px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  letter-spacing: 0.3px;
+}
+.nav-plan-gratuit  { background: #f1f3f4; color: #555; }
+.nav-plan-pro      { background: #fef3c7; color: #b45309; }
+.nav-plan-business { background: #dbeafe; color: #1d4ed8; }
+
+/* ── Gérer button ── */
+.nav-manage-btn {
+  border: 1.5px solid #dadce0;
+  background: #fff;
+  color: #1a1a2e;
+  border-radius: 24px;
+  padding: 9px 24px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+.nav-manage-btn:hover {
+  background: #f1f3f4;
+  border-color: #bbb;
+}
+
+/* ── Logout button modern ── */
+.nav-dropdown-logout {
+  margin: 8px auto;
+  width: 90%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  /* Utilisation d'un Slate foncé pour un look premium */
+  color: #475569; 
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 8px;
+  margin-top: 4px;
+}
+
+/* Style de l'icône SVG */
+.nav-dropdown-logout svg {
+  width: 18px;
+  height: 18px;
+  stroke: #94a3b8; /* Gris doux par défaut */
+  transition: stroke 0.2s ease;
+}
+
+/* Hover effect : Changement subtil vers le rouge */
+.nav-dropdown-logout:hover {
+  background: #fff1f2; /* Rose très pâle */
+  color: #e11d48;     /* Rose/Rouge moderne */
+}
+
+.nav-dropdown-logout:hover svg {
+  stroke: #e11d48;    /* L'icône change aussi de couleur */
+  transform: translateX(1px);
+}
+
+/* Active effect pour le clic */
+.nav-dropdown-logout:active {
+  transform: scale(0.98);
+}
