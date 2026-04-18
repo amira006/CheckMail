@@ -19,7 +19,7 @@ import Signup from "./Signup";
 import ForgotPassword from "./ForgotPassword";
 import ResetPassword from "./ResetPassword";
 import ProtectedRoute from "./ProtectedRoute";
-import Historique from "./Historique";
+import Historique from "./historique";
 import Forfaits from "./Forfaits";
 
 import "./App.css";
@@ -75,9 +75,10 @@ function AppRoutes() {
         <Route
           path="/historique"
           element={
-            <ProtectedRoute>
-              <Historique />
+               <ProtectedRoute>
+               <Historique />
             </ProtectedRoute>
+          
           }
         />
 
@@ -93,9 +94,9 @@ function AppRoutes() {
         <Route
           path="/results"
           element={
-            <ProtectedRoute>
+            
               <Results emlData={emlData} onBack={() => navigate("/analyze")} />
-            </ProtectedRoute>
+           
           }
         />
 

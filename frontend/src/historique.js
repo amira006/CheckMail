@@ -2,178 +2,199 @@ import { useState, useEffect, useRef } from "react";
 import { getHistory, deleteAnalysis } from "./emailService";
 import { getChatHistory } from "./chatService";
 import "./Historique.css";
+import {
+  useNavigate,
+} from "react-router-dom";
 
-// ── SVG Icons ──────────────────────────────────────────────────────────────
-const IconSafe = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-    <polyline points="22 4 12 14.01 9 11.01" />
-  </svg>
-);
+const EMAILS = [
+  {
+    id: 1,
+    senderName: "Ahmed Benali",
+    senderEmail: "ahmed.benali@gmail.com",
+    subject: "Facture #2024-0512 — Paiement urgent requis",
+    date: "2024-06-10", time: "09:14", size: "348 Ko",
+    status: "Infecté", score: 94,
+    attachments: 2,
+    attachmentNames: ["facture.pdf", "paiement.exe"],
+    headers: "Received: from mail.spam-domain.ru\nX-Mailer: PhishKit v3",
+    bodyPreview: "Veuillez régler cette facture dans les 24h ou votre compte sera suspendu.",
+    threats: [
+      { icon: "🦠", text: "Exécutable malveillant joint (paiement.exe)", level: "high" },
+      { icon: "🔗", text: "Lien de phishing détecté dans le corps", level: "high" },
+      { icon: "⚠️", text: "Expéditeur usurpant un domaine légitime", level: "medium" }
+    ]
+  },
+  {
+    id: 2,
+    senderName: "Mariem Trabelsi",
+    senderEmail: "mariem.t@company.tn",
+    subject: "Réunion projet Q3 — Ordre du jour",
+    date: "2024-06-10", time: "08:02", size: "42 Ko",
+    status: "Propre", score: 2,
+    attachments: 1,
+    attachmentNames: ["agenda_q3.pdf"],
+    headers: "Received: from mail.company.tn\nDKIM: pass",
+    bodyPreview: "Bonjour l'équipe, veuillez trouver ci-joint l'ordre du jour pour notre réunion de demain.",
+    threats: []
+  },
+  {
+    id: 3,
+    senderName: "Support PayPal",
+    senderEmail: "noreply@paypa1-secure.com",
+    subject: "Votre compte a été limité — Action requise",
+    date: "2024-06-09", time: "22:51", size: "125 Ko",
+    status: "Infecté", score: 99,
+    attachments: 0, attachmentNames: [],
+    headers: "Received: from mail.paypa1-secure.com\nSPF: fail",
+    bodyPreview: "Nous avons détecté une activité suspecte sur votre compte. Connectez-vous immédiatement.",
+    threats: [
+      { icon: "🎣", text: "Domaine imitant PayPal (paypa1-secure.com)", level: "high" },
+      { icon: "🔗", text: "URL de phishing dans le bouton d'action", level: "high" }
+    ]
+  },
+  {
+    id: 4,
+    senderName: "Nour Khelifi",
+    senderEmail: "nour.khelifi@univ-tunis.tn",
+    subject: "Thèse — Résultats chapitre 4",
+    date: "2024-06-09", time: "14:30", size: "2.1 Mo",
+    status: "Propre", score: 0,
+    attachments: 3,
+    attachmentNames: ["chap4.docx", "data.xlsx", "graphs.zip"],
+    headers: "Received: from smtp.univ-tunis.tn\nDKIM: pass\nSPF: pass",
+    bodyPreview: "Bonjour, je vous transmets les résultats finaux du chapitre 4 de ma thèse.",
+    threats: []
+  },
+  {
+    id: 5,
+    senderName: "Amazon.fr",
+    senderEmail: "confirm@amaz0n-delivery.info",
+    subject: "Votre colis est en attente — Frais de douane",
+    date: "2024-06-09", time: "11:17", size: "88 Ko",
+    status: "Suspect", score: 71,
+    attachments: 1,
+    attachmentNames: ["suivi_colis.html"],
+    headers: "Received: from amaz0n-delivery.info\nSPF: softfail",
+    bodyPreview: "Votre colis est bloqué en douane. Veuillez payer 2,99 € pour le libérer.",
+    threats: [
+      { icon: "⚠️", text: "Domaine suspect imitant Amazon", level: "medium" },
+      { icon: "📎", text: "Fichier HTML joint avec scripts embarqués", level: "medium" },
+      { icon: "💳", text: "Demande de paiement non sollicitée", level: "medium" }
+    ]
+  },
+  {
+    id: 6,
+    senderName: "Sarra Mansouri",
+    senderEmail: "s.mansouri@cabinet-conseil.tn",
+    subject: "Proposition commerciale — Partenariat 2024",
+    date: "2024-06-08", time: "16:05", size: "560 Ko",
+    status: "Propre", score: 8,
+    attachments: 2,
+    attachmentNames: ["proposition.pdf", "brochure.pdf"],
+    headers: "Received: from mail.cabinet-conseil.tn\nDKIM: pass",
+    bodyPreview: "Madame, Monsieur, suite à notre échange téléphonique, voici notre proposition.",
+    threats: []
+  },
+  {
+    id: 7,
+    senderName: "Microsoft Azure",
+    senderEmail: "azure-alerts@m1crosoft-cloud.net",
+    subject: "Alerte sécurité — Connexion inhabituelle",
+    date: "2024-06-08", time: "03:22", size: "64 Ko",
+    status: "Infecté", score: 97,
+    attachments: 0, attachmentNames: [],
+    headers: "Received: from m1crosoft-cloud.net\nSPF: fail\nDKIM: fail",
+    bodyPreview: "Votre abonnement Azure a été suspendu suite à une activité suspecte.",
+    threats: [
+      { icon: "🦠", text: "Domaine typosquat imitant Microsoft", level: "high" },
+      { icon: "🎣", text: "Tentative d'hameçonnage ciblé (spear phishing)", level: "high" },
+      { icon: "🕐", text: "Envoi à 3h du matin — comportement anormal", level: "low" }
+    ]
+  },
+  {
+    id: 8,
+    senderName: "Rami Bouazizi",
+    senderEmail: "r.bouazizi@startup.io",
+    subject: "Invitation Beta — Notre nouvelle application SaaS",
+    date: "2024-06-07", time: "10:44", size: "78 Ko",
+    status: "Suspect", score: 45,
+    attachments: 0, attachmentNames: [],
+    headers: "Received: from mail.startup.io\nDKIM: pass\nSPF: softfail",
+    bodyPreview: "Nous vous invitons à tester en exclusivité notre nouvelle plateforme.",
+    threats: [
+      { icon: "⚠️", text: "SPF softfail — configuration email incomplète", level: "low" },
+      { icon: "🔍", text: "Domaine récemment enregistré (< 30 jours)", level: "medium" }
+    ]
+  },
+  {
+    id: 9,
+    senderName: "La Poste Tunisienne",
+    senderEmail: "notification@poste.tn",
+    subject: "Avis de passage — Colis référence TN24891",
+    date: "2024-06-07", time: "08:10", size: "31 Ko",
+    status: "Propre", score: 1,
+    attachments: 0, attachmentNames: [],
+    headers: "Received: from smtp.poste.tn\nDKIM: pass\nSPF: pass",
+    bodyPreview: "Un avis de passage a été déposé pour votre colis TN24891.",
+    threats: []
+  },
+  {
+    id: 10,
+    senderName: "Inconnu",
+    senderEmail: "xd8f2k@protonmail.com",
+    subject: "URGENT: Vos données personnelles exposées",
+    date: "2024-06-06", time: "19:58", size: "15 Ko",
+    status: "En cours", score: null,
+    attachments: 1,
+    attachmentNames: ["voir_ici.zip"],
+    headers: "En cours d'analyse…",
+    bodyPreview: "Nous avons vos données. Contactez-nous avant 24h.",
+    threats: []
+  },
+  {
+    id: 11,
+    senderName: "Hana Dridi",
+    senderEmail: "h.dridi@minfin.gov.tn",
+    subject: "Déclaration fiscale 2023 — Accusé de réception",
+    date: "2024-06-06", time: "14:22", size: "92 Ko",
+    status: "Propre", score: 0,
+    attachments: 1,
+    attachmentNames: ["accuse_reception.pdf"],
+    headers: "Received: from smtp.gov.tn\nDKIM: pass\nSPF: pass",
+    bodyPreview: "Votre déclaration fiscale 2023 a bien été reçue et enregistrée.",
+    threats: []
+  },
+  {
+    id: 12,
+    senderName: "Lottery Winner",
+    senderEmail: "winner@global-prize2024.win",
+    subject: "Félicitations ! Vous avez gagné 1 500 000 €",
+    date: "2024-06-05", time: "12:00", size: "210 Ko",
+    status: "Infecté", score: 100,
+    attachments: 1,
+    attachmentNames: ["claim_form.doc"],
+    headers: "Received: from bulk.global-prize2024.win\nSPF: fail",
+    bodyPreview: "Vous avez été sélectionné pour recevoir un prix. Remplissez le formulaire joint.",
+    threats: [
+      { icon: "🦠", text: "Document Word avec macros malveillantes", level: "high" },
+      { icon: "🎣", text: "Arnaque classique à la loterie (advance-fee fraud)", level: "high" },
+      { icon: "🌍", text: "Serveur d'envoi en masse blacklisté", level: "high" }
+    ]
+  }
+];
 
-const IconWarn = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-    <line x1="12" y1="9" x2="12" y2="13" />
-    <line x1="12" y1="17" x2="12.01" y2="17" />
-  </svg>
-);
+export default function HistoriquePage() {
+  const navigate = useNavigate();
 
-const IconDanger = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="10" />
-    <line x1="12" y1="8" x2="12" y2="12" />
-    <line x1="12" y1="16" x2="12.01" y2="16" />
-  </svg>
-);
-
-const IconUnknown = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="10" />
-    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-    <line x1="12" y1="17" x2="12.01" y2="17" />
-  </svg>
-);
-
-const IconChat = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-  </svg>
-);
-
-const IconChevronUp = () => (
-  <svg
-    width="12"
-    height="12"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="18 15 12 9 6 15" />
-  </svg>
-);
-
-const IconChevronDown = () => (
-  <svg
-    width="12"
-    height="12"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="6 9 12 15 18 9" />
-  </svg>
-);
-
-const IconTrash = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="3 6 5 6 21 6" />
-    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-    <path d="M10 11v6" />
-    <path d="M14 11v6" />
-    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-  </svg>
-);
-
-const IconSpinner = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    style={{ animation: "spin 1s linear infinite" }}
-  >
-    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-  </svg>
-);
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-const VERDICT_MAP = {
-  Propre: { cls: "safe", label: "Sûr", icon: <IconSafe /> },
-  Suspect: { cls: "warn", label: "Suspect", icon: <IconWarn /> },
-  Infecté: { cls: "danger", label: "Dangereux", icon: <IconDanger /> },
-};
-
-function parseMarkdown(text) {
-  if (!text) return "";
-  return text
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^*\n]+?)\*/g, "<em>$1</em>")
-    .replace(/^[\*\-]\s+(.+)$/gm, "<li>$1</li>")
-    .replace(
-      /(<li>[\s\S]*?<\/li>)(\n<li>[\s\S]*?<\/li>)*/g,
-      (m) => `<ul>${m}</ul>`
-    )
-    .replace(/(?<!>)\n(?!<)/g, "<br/>")
-    .replace(/(<br\/>){2,}/g, "<br/>");
-}
-
-// ── Composant principal ────────────────────────────────────────────────────
-export default function Historique() {
+  const [selectedEmail, setSelectedEmail] = useState(null);
+  const [report, setReport] = useState(null);
+  const [msgs, setMsgs] = useState([]);
+  const [input, setInput] = useState("");
+  const [typing, setTyping] = useState(false);
+  const [busy, setBusy] = useState(true);
+  const [history, setHistory] = useState([]);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [emailId, setEmailId] = useState(null);
   const [emails, setEmails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
@@ -182,171 +203,212 @@ export default function Historique() {
   const [deleting, setDeleting] = useState(null);
   const chatRef = useRef();
 
-  // ── Charger la liste des emails ────────────────────────────────────
+  const meta = emails.find(e => e.id === emailId) || {};
+
+  const printFallback = (email) => {
+    const win = window.open("", "_blank");
+
+    const threats = email.threats.length
+      ? email.threats.map(t => `<li>${t.icon} ${t.text}</li>`).join("")
+      : "<li>Aucune menace</li>";
+
+    win.document.write(`
+      <html>
+        <head>
+          <title>Rapport Email</title>
+          <style>
+            body { font-family: Arial; padding: 20px; }
+            h1 { color: #1e40af; }
+            .box { margin-bottom: 15px; }
+          </style>
+        </head>
+        <body>
+          <h1>📧 Rapport Email</h1>
+          <div class="box"><b>Expéditeur:</b> ${email.senderName}</div>
+          <div class="box"><b>Email:</b> ${email.senderEmail}</div>
+          <div class="box"><b>Sujet:</b> ${email.subject}</div>
+          <div class="box"><b>Date:</b> ${email.date} ${email.time}</div>
+          <div class="box"><b>Status:</b> ${email.status}</div>
+          <div class="box"><b>Score:</b> ${email.score ?? "--"}</div>
+          <h3>Menaces</h3>
+          <ul>${threats}</ul>
+          <script>
+            window.onload = function() {
+              window.print();
+            }
+          </script>
+        </body>
+      </html>
+    `);
+
+    win.document.close();
+  };
+
+  const downloadPDF = async () => {
+    const email = selectedEmail;
+
+    try {
+      setPdfBusy(true);
+
+      const res = await fetch("/api/report/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ report, meta }),
+      });
+
+      if (!res.ok) throw new Error("API failed");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `CheckMail_${email.status}_${email.score}.pdf`;
+      a.click();
+
+      URL.revokeObjectURL(url);
+
+    } catch (err) {
+      console.log("Fallback print 🚀");
+      printFallback(email);
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
   useEffect(() => {
     loadEmails();
   }, []);
 
   const loadEmails = async () => {
     setLoading(true);
+
     try {
       const data = await getHistory(1, 50);
-      setEmails(data.emails || []);
-    } catch (_) {
-      setEmails([]);
+
+      if (data && data.emails && data.emails.length > 0) {
+        setEmails(data.emails);
+      } else {
+        setEmails(EMAILS);
+      }
+
+    } catch (err) {
+      setEmails(EMAILS);
     } finally {
       setLoading(false);
     }
   };
 
-  // ── Ouvrir / fermer le chat d'un email ────────────────────────────
-  const openChat = async (emailId) => {
-    if (selectedId === emailId) {
-      setSelectedId(null);
-      setChatMsgs([]);
-      return;
-    }
-    setSelectedId(emailId);
-    setChatLoading(true);
-    try {
-      const msgs = await getChatHistory(emailId);
-      setChatMsgs(msgs);
-    } catch (_) {
-      setChatMsgs([]);
-    } finally {
-      setChatLoading(false);
-    }
-  };
-
-  // ── Auto-scroll chat ──────────────────────────────────────────────
-  useEffect(() => {
-    if (chatRef.current)
-      chatRef.current.scrollTop = chatRef.current.scrollHeight;
-  }, [chatMsgs]);
-
-  // ── Supprimer un email ────────────────────────────────────────────
-  const handleDelete = async (e, id) => {
-    e.stopPropagation();
-    if (!window.confirm("Supprimer cette analyse ?")) return;
-    setDeleting(id);
-    const ok = await deleteAnalysis(id);
-    if (ok) {
-      setEmails((p) => p.filter((em) => em._id !== id));
-      if (selectedId === id) {
-        setSelectedId(null);
-        setChatMsgs([]);
-      }
-    }
-    setDeleting(null);
-  };
-
-  // ── Rendu ─────────────────────────────────────────────────────────
   return (
-    <div className="hist-wrap">
-      <div className="hist-header">
-        <h1>Historique des analyses</h1>
-        <span className="hist-count">{emails.length} email(s)</span>
+    <div className="page">
+      <h1 className="title">📧 MailGuard — Historique</h1>
+
+      <div className="stats">
+        <div className="stat">Total: {emails.length}</div>
+        <div className="stat green">
+          Propre: {emails.filter(e => e.status === "Propre").length}
+        </div>
+        <div className="stat red">
+          Infecté: {emails.filter(e => e.status === "Infecté").length}
+        </div>
+        <div className="stat orange">
+          Suspect: {emails.filter(e => e.status === "Suspect").length}
+        </div>
       </div>
 
       {loading ? (
-        <div className="hist-loading">Chargement…</div>
-      ) : emails.length === 0 ? (
-        <div className="hist-empty">
-          <p>Aucune analyse enregistrée.</p>
-        </div>
+        <p>Loading...</p>
       ) : (
-        <div className="hist-list">
-          {emails.map((em) => {
-            const v = VERDICT_MAP[em.verdict] || {
-              cls: "warn",
-              label: em.verdict,
-              icon: <IconUnknown />,
-            };
-            const isOpen = selectedId === em._id;
+        <div className="grid">
+          {emails.map(email => {
+            const color =
+              email.status === "Propre"
+                ? "green"
+                : email.status === "Suspect"
+                ? "orange"
+                : "red";
 
             return (
-              <div key={em._id} className={`hist-card ${isOpen ? "open" : ""}`}>
-                {/* ── Ligne principale ── */}
-                <div className="hist-card-top" onClick={() => openChat(em._id)}>
-                  <div className="hist-card-left">
-                    <span className={`hist-verdict ${v.cls}`}>
-                      {v.icon} {v.label}
-                    </span>
-                    <div className="hist-info">
-                      <span className="hist-filename">{em.filename}</span>
-                      <span className="hist-subject">{em.subject || "—"}</span>
-                      <span className="hist-date">
-                        {new Date(em.createdAt).toLocaleDateString("fr-FR", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
+              <div
+                key={email.id}
+                className={`card ${color}`}
+                onClick={() => setSelectedEmail(email)}
+              >
+                <div className="card-header">
+                  <div className="avatar">
+                    {email.senderName[0]}
                   </div>
-                  <div className="hist-card-right">
-                    <div className={`hist-score ${v.cls}`}>{em.score}</div>
-                    <button
-                      className="hist-btn-chat"
-                      onClick={() => openChat(em._id)}
-                    >
-                      <IconChat />
-                      {isOpen ? (
-                        <>
-                          <span>Fermer chat</span> <IconChevronUp />
-                        </>
-                      ) : (
-                        <>
-                          <span>Voir chat</span> <IconChevronDown />
-                        </>
-                      )}
-                    </button>
-                    <button
-                      className="hist-btn-delete"
-                      onClick={(e) => handleDelete(e, em._id)}
-                      disabled={deleting === em._id}
-                    >
-                      {deleting === em._id ? <IconSpinner /> : <IconTrash />}
-                    </button>
+                  <div>
+                    <div className="name">{email.senderName}</div>
+                    <div className="email">{email.senderEmail}</div>
                   </div>
                 </div>
 
-                {/* ── Chat history ── */}
-                {isOpen && (
-                  <div className="hist-chat">
-                    <div className="hist-chat-title">
-                      <IconChat /> Historique du chat
+                <div className="subject">{email.subject}</div>
+
+                <div className="card-footer">
+                  <span className={`badge ${color}`}>
+                    {email.status}
+                  </span>
+
+                  <div className="score">
+                    <div className="bar">
+                      <div
+                        className="fill"
+                        style={{ width: `${email.score || 0}%` }}
+                      ></div>
                     </div>
-                    {chatLoading ? (
-                      <div className="hist-chat-loading">Chargement…</div>
-                    ) : chatMsgs.length === 0 ? (
-                      <div className="hist-chat-empty">
-                        Aucun message enregistré pour cet email.
-                      </div>
-                    ) : (
-                      <div className="hist-chat-msgs" ref={chatRef}>
-                        {chatMsgs.map((m, i) => (
-                          <div key={i} className={`hist-msg ${m.role}`}>
-                            <span className="hist-msg-sender">
-                              {m.role === "user" ? "Vous" : "Assistant"}
-                            </span>
-                            <div
-                              className="hist-msg-bub"
-                              dangerouslySetInnerHTML={{
-                                __html: parseMarkdown(m.content),
-                              }}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <span>{email.score ?? "--"}%</span>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {selectedEmail && (
+        <div className="modal-bg" onClick={() => setSelectedEmail(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <span className="modal-close-x" onClick={() => setSelectedEmail(null)}>
+              ✕
+            </span>
+
+            <h2>{selectedEmail.subject}</h2>
+
+            <p><b>Expéditeur:</b> {selectedEmail.senderEmail}</p>
+            <p><b>Date:</b> {selectedEmail.date} {selectedEmail.time}</p>
+            <p><b>Taille:</b> {selectedEmail.size}</p>
+
+            <p className="preview">{selectedEmail.bodyPreview}</p>
+
+            {selectedEmail.threats.length > 0 && (
+              <>
+                <h3>⚠️ Menaces</h3>
+                <ul>
+                  {selectedEmail.threats.map((t, i) => (
+                    <li key={i}>{t.icon} {t.text}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            <div className="modal-actions">
+              <button
+                className="btn analyse"
+                onClick={() => navigate("/results", { state: selectedEmail })}
+              >
+                Analyse
+              </button>
+
+              <button
+                className="btn rapport"
+                onClick={downloadPDF}
+              >
+                Rapport
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
