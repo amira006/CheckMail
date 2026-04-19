@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getToken } from "./authService";
 import Forfaits from "./Forfaits";
+import tutorial from "./media/tutorial.mp4";
 import "./Upload.css";
 
 // ── Icônes SVG ────────────────────────────────────────────────────────────────
@@ -136,6 +137,35 @@ const IconCircle = () => (
     strokeLinejoin="round"
   >
     <circle cx="12" cy="12" r="10" />
+  </svg>
+);
+const IconPlay = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    stroke="none"
+  >
+    <polygon points="5,3 19,12 5,21" />
+  </svg>
+);
+const IconChevron = ({ open }) => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{
+      transform: open ? "rotate(180deg)" : "rotate(0deg)",
+      transition: "transform .3s ease",
+    }}
+  >
+    <path d="M6 9l6 6 6-6" />
   </svg>
 );
 
@@ -295,64 +325,117 @@ const StepIcon = ({ state }) => {
   );
 };
 
-// ── Modal Forfaits ────────────────────────────────────────────────────────────
+// ── Video Tutorial Component ──────────────────────────────────────────────────
 
-const plans = [
-  {
-    id: "gratuit",
-    name: "Gratuit",
-    price: "0€",
-    period: "/mois",
-    color: "#6b7280",
-    features: [
-      "3 analyses / semaine",
-      "Score de sécurité",
-      "Détection phishing IA",
-      "Historique 7 jours",
-    ],
-    cta: "Plan actuel",
-    disabled: true,
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    price: "5€",
-    period: "/mois",
-    color: "#4f46e5",
-    popular: true,
-    features: [
-      "50 analyses / jour",
-      "Score de sécurité",
-      "Détection phishing IA",
-      "Historique illimité",
-      "Assistant IA prioritaire",
-      "Support email",
-    ],
-    cta: "Choisir Pro",
-    disabled: false,
-  },
-  {
-    id: "business",
-    name: "Business",
-    price: "20€",
-    period: "/mois",
-    color: "#059669",
-    features: [
-      "Analyses illimitées",
-      "Score de sécurité",
-      "Détection phishing IA",
-      "Historique illimité",
-      "Assistant IA prioritaire",
-      "Accès API",
-      "Support prioritaire 24/7",
-      "Tableau de bord équipe",
-    ],
-    cta: "Choisir Business",
-    disabled: false,
-  },
-];
+const VideoTutorial = ({ src }) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div
+      style={{
+        borderRadius: 14,
+        border: "1px solid rgba(37,99,235,.15)",
+        background: "rgba(37,99,235,.03)",
+        overflow: "hidden",
+        transition: "box-shadow .2s",
+      }}
+    >
+      {/* Toggle header */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "12px 16px",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          textAlign: "left",
+        }}
+      >
+        {/* Play badge */}
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            background: "rgba(37,99,235,.12)",
+            color: "#2563eb",
+            border: "1px solid rgba(37,99,235,.22)",
+            flexShrink: 0,
+          }}
+        >
+          <IconPlay />
+        </span>
+
+        {/* Label */}
+        <span style={{ flex: 1 }}>
+          <span
+            style={{
+              display: "block",
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#1e293b",
+            }}
+          >
+            Tutoriel vidéo
+          </span>
+          <span
+            style={{
+              display: "block",
+              fontSize: 12,
+              color: "#64748b",
+              marginTop: 1,
+            }}
+          >
+            Comment télécharger un fichier .eml ?
+          </span>
+        </span>
+
+        {/* Chevron */}
+        <span style={{ color: "#94a3b8", display: "inline-flex" }}>
+          <IconChevron open={open} />
+        </span>
+      </button>
+
+      {/* Collapsible video area */}
+      <div
+        style={{
+          maxHeight: open ? 400 : 0,
+          overflow: "hidden",
+          transition: "max-height .4s cubic-bezier(.4,0,.2,1)",
+        }}
+      >
+        <div style={{ padding: "0 16px 16px" }}>
+          <video
+            controls
+            style={{
+              width: "100%",
+              borderRadius: 10,
+              background: "#000",
+              display: "block",
+              maxHeight: 340,
+              outline: "none",
+              border: "1px solid rgba(0,0,0,.08)",
+            }}
+          >
+            <source src={src} type="video/mp4" />
+            Votre navigateur ne supporte pas la lecture vidéo.
+          </video>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ── Component Principal ───────────────────────────────────────────────────────
+
+const TUTORIAL_VIDEO_URL = tutorial;
 
 export default function Upload({ onAnalyze }) {
   const [file, setFile] = useState(null);
@@ -370,7 +453,6 @@ export default function Upload({ onAnalyze }) {
     "Génération du rapport…",
   ];
 
-  // ── Vérifier quota au chargement (lecture seule, pas d'incrément ici) ──
   useEffect(() => {
     const checkQuota = async () => {
       try {
@@ -379,8 +461,9 @@ export default function Upload({ onAnalyze }) {
         });
         const data = await res.json();
         if (data.success) {
-          setQuota(data.data);
-          if (!data.data.allowed) setShowForfaits(true);
+          const { tokens, unlimited, allowed } = data.data;
+          setQuota({ tokens, unlimited, allowed });
+          if (!allowed) setShowForfaits(true);
         }
       } catch (err) {
         console.error("Erreur quota:", err);
@@ -398,11 +481,9 @@ export default function Upload({ onAnalyze }) {
     setFile(f);
   };
 
-  // ✅ SÉCURISÉ : Check + incrément atomique côté serveur AVANT de lancer l'analyse
   const analyze = async () => {
     if (!file) return;
 
-    // ── Vérification serveur (atomique : check + incrément en une seule requête) ──
     try {
       const res = await fetch("/auth-api/api/plan/analyze", {
         method: "POST",
@@ -411,24 +492,19 @@ export default function Upload({ onAnalyze }) {
       const data = await res.json();
 
       if (!data.success) {
-        // Quota dépassé côté serveur → afficher modal
+        setQuota((prev) => (prev ? { ...prev, allowed: false } : prev));
         setShowForfaits(true);
-        // Mettre à jour l'état local pour refléter la réalité
-        setQuota((prev) =>
-          prev ? { ...prev, allowed: false, remaining: 0 } : prev
-        );
         return;
       }
 
-      // Mettre à jour l'affichage du quota restant
       if (data.data) {
         setQuota((prev) =>
           prev
             ? {
                 ...prev,
-                remaining: data.data.remaining,
-                analysisCount: data.data.analysisCount,
-                allowed: data.data.remaining > 0,
+                tokens: data.data.tokens,
+                unlimited: data.data.unlimited ?? prev.unlimited,
+                allowed: data.data.allowed ?? data.data.tokens > 0,
               }
             : prev
         );
@@ -439,7 +515,6 @@ export default function Upload({ onAnalyze }) {
       return;
     }
 
-    // ── Lancer l'analyse seulement si le serveur a autorisé ──
     setLoading(true);
     setStep(0);
     const reader = new FileReader();
@@ -463,13 +538,12 @@ export default function Upload({ onAnalyze }) {
 
   const stepState = (i) => {
     if (i < step) return "done";
-    if (i === step) return "active";
+    if (i === step && step < STEPS.length) return "active";
     return "pending";
   };
 
   return (
     <div className="upload-page">
-      {/* ✅ Modal forfaits */}
       {showForfaits && <Forfaits onClose={() => setShowForfaits(false)} />}
 
       {/* Header */}
@@ -485,7 +559,6 @@ export default function Upload({ onAnalyze }) {
           menaces de sécurité en quelques secondes.
         </p>
 
-        {/* ✅ Quota badge */}
         {quota && (
           <div
             style={{
@@ -506,11 +579,13 @@ export default function Upload({ onAnalyze }) {
               fontWeight: 500,
             }}
           >
-            {quota.allowed
-              ? `✓ ${quota.remaining} analyse${
-                  quota.remaining > 1 ? "s" : ""
-                } restante${quota.remaining > 1 ? "s" : ""} aujourd'hui`
-              : "✕ Limite atteinte — Passez à un forfait supérieur"}
+            {quota.unlimited
+              ? "✓ Analyses illimitées"
+              : quota.allowed
+              ? `✓ ${quota.tokens} token${quota.tokens > 1 ? "s" : ""} restant${
+                  quota.tokens > 1 ? "s" : ""
+                }`
+              : "✕ Tokens insuffisants — Passez à un forfait supérieur"}
           </div>
         )}
       </div>
@@ -568,6 +643,7 @@ export default function Upload({ onAnalyze }) {
           </div>
         )}
 
+        {/* Hint */}
         <div className="upload-hint">
           <HintIcon />
           <p>
@@ -575,6 +651,11 @@ export default function Upload({ onAnalyze }) {
             droit → "Enregistrer sous". Depuis Gmail : menu "Plus" →
             "Télécharger le message".
           </p>
+        </div>
+
+        {/* ── Video Tutorial ── */}
+        <div style={{ marginTop: 12 }}>
+          <VideoTutorial src={TUTORIAL_VIDEO_URL} />
         </div>
 
         <button className="analyze-btn" disabled={!file} onClick={analyze}>
@@ -594,7 +675,11 @@ export default function Upload({ onAnalyze }) {
                 <div
                   key={i}
                   className={`load-step ${
-                    i < step ? "done" : i === step ? "active" : ""
+                    i < step
+                      ? "done"
+                      : i === step && step < STEPS.length
+                      ? "active"
+                      : ""
                   }`}
                 >
                   <StepIcon state={stepState(i)} /> {s}

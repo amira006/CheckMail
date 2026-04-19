@@ -50,8 +50,9 @@
   color: #5465ff;
 }
 
-/* ── BUTTON ── */
-.btn-login,.btn-logout {
+/* ── BUTTONS ── */
+.btn-login,
+.btn-logout {
   padding: 9px 22px;
   border: 1.5px solid #5465ff;
   background: transparent;
@@ -64,14 +65,12 @@
   font-family: inherit;
 }
 
-.btn-login:hover {
-  background: #5465ff;
-  color: white;
-}
+.btn-login:hover,
 .btn-logout:hover {
   background: #5465ff;
   color: white;
 }
+
 /* ── MOBILE ── */
 @media screen and (max-width: 768px) {
   .navbar {
@@ -98,7 +97,7 @@
   }
 }
 
-/* ── 🔥 REMOVE BLUE BOX COMPLETELY ── */
+/* ── REMOVE BLUE OUTLINE ── */
 a,
 a:focus,
 a:active,
@@ -109,15 +108,16 @@ a:focus-visible {
   background: transparent !important;
 }
 
-/* remove mobile tap highlight */
 * {
   -webkit-tap-highlight-color: transparent;
 }
-/* ============================================================
-   AVATAR & DROPDOWN — append these to your existing Navbar.css
-   ============================================================ */
 
-/* ── Avatar button ── */
+/* ── AVATAR WRAPPER ── */
+.nav-avatar-wrapper {
+  position: relative;
+}
+
+/* ── AVATAR BUTTON ── */
 .nav-avatar-btn {
   display: flex;
   align-items: center;
@@ -136,7 +136,7 @@ a:focus-visible {
   background: rgba(79, 70, 229, 0.06);
 }
 
-/* ── Avatar image (Google photo) ── */
+/* ── AVATAR IMAGE ── */
 .nav-avatar-img {
   width: 34px;
   height: 34px;
@@ -146,7 +146,7 @@ a:focus-visible {
   border: 2px solid #e5e7eb;
 }
 
-/* ── Initials fallback ── */
+/* ── INITIALS FALLBACK ── */
 .nav-avatar-initials {
   width: 34px;
   height: 34px;
@@ -163,7 +163,7 @@ a:focus-visible {
   flex-shrink: 0;
 }
 
-/* ── Caret ── */
+/* ── CARET ── */
 .nav-avatar-caret {
   font-size: 11px;
   color: #6b7280;
@@ -175,68 +175,7 @@ a:focus-visible {
   transform: rotate(180deg);
 }
 
-/* ── Wrapper (positioning context) ── */
-.nav-avatar-wrapper {
-  position: relative;
-}
-
-/* ── Avatar button ── */
-.nav-avatar-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: 2px solid transparent;
-  border-radius: 50px;
-  padding: 3px 8px 3px 3px;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-}
-
-.nav-avatar-btn:hover,
-.nav-avatar-btn.open {
-  border-color: rgba(79, 70, 229, 0.4);
-  background: rgba(79, 70, 229, 0.06);
-}
-
-/* ── Avatar image ── */
-.nav-avatar-img {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  object-fit: cover;
-  display: block;
-  border: 2px solid #e5e7eb;
-}
-
-/* ── Initials fallback ── */
-.nav-avatar-initials {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  letter-spacing: 0.5px;
-  user-select: none;
-  flex-shrink: 0;
-}
-
-/* ── Caret ── */
-.nav-avatar-caret {
-  font-size: 11px;
-  color: #6b7280;
-  transition: transform 0.2s;
-}
-.nav-avatar-btn.open .nav-avatar-caret {
-  transform: rotate(180deg);
-}
-
-/* ── Dropdown panel ── */
+/* ── DROPDOWN PANEL ── */
 .nav-dropdown {
   position: absolute;
   top: calc(100% + 12px);
@@ -244,7 +183,7 @@ a:focus-visible {
   width: 300px;
   background: #fff;
   border-radius: 16px;
-  box-shadow: 0 4px 32px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.15), 0 1px 4px rgba(0, 0, 0, 0.08);
   z-index: 1000;
   overflow: hidden;
   animation: dropdownIn 0.18s ease;
@@ -253,10 +192,10 @@ a:focus-visible {
 
 @keyframes dropdownIn {
   from { opacity: 0; transform: translateY(-8px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
 }
 
-/* ── Header - Google style ── */
+/* ── DROPDOWN HEADER ── */
 .nav-dropdown-header {
   display: flex;
   flex-direction: column;
@@ -266,7 +205,7 @@ a:focus-visible {
   text-align: center;
 }
 
-/* ── Avatar large in header ── */
+/* ── AVATAR LARGE ── */
 .nav-dropdown-avatar-large {
   width: 72px;
   height: 72px;
@@ -289,7 +228,7 @@ a:focus-visible {
   border-radius: 50%;
 }
 
-/* ── Greeting ── */
+/* ── GREETING ── */
 .nav-dropdown-greeting {
   font-size: 17px;
   font-weight: 600;
@@ -297,14 +236,14 @@ a:focus-visible {
   margin-bottom: 4px;
 }
 
-/* ── Email ── */
+/* ── EMAIL ── */
 .nav-dropdown-email {
   font-size: 13px;
   color: #6b7280;
   margin-bottom: 14px;
 }
 
-/* ── Plan Badge ── */
+/* ── PLAN BADGE ── */
 .nav-plan-badge {
   display: inline-block;
   padding: 5px 16px;
@@ -314,11 +253,43 @@ a:focus-visible {
   margin-bottom: 16px;
   letter-spacing: 0.3px;
 }
-.nav-plan-gratuit  { background: #f1f3f4; color: #555; }
+
+.nav-plan-gratuit  { background: #f1f3f4; color: #555;    }
 .nav-plan-pro      { background: #fef3c7; color: #b45309; }
 .nav-plan-business { background: #dbeafe; color: #1d4ed8; }
 
-/* ── Gérer button ── */
+/* ── TOKEN COUNT (remplace l'ancienne TokenBar) ── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+.nav-token-count-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-radius: 8px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.nav-token-count-row .nav-token-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.nav-token-count-row .nav-token-value {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ── GÉRER BUTTON ── */
 .nav-manage-btn {
   border: 1.5px solid #dadce0;
   background: #fff;
@@ -331,20 +302,20 @@ a:focus-visible {
   transition: background 0.15s, border-color 0.15s;
   font-family: inherit;
 }
+
 .nav-manage-btn:hover {
   background: #f1f3f4;
   border-color: #bbb;
 }
 
-/* ── Logout button modern ── */
+/* ── LOGOUT BUTTON ── */
 .nav-dropdown-logout {
-  margin: 8px auto;
+  margin: 4px auto 8px;
   width: 90%;
   padding: 10px 14px;
   border: none;
   background: transparent;
-  /* Utilisation d'un Slate foncé pour un look premium */
-  color: #475569; 
+  color: #475569;
   font-size: 13.5px;
   font-weight: 500;
   text-align: center;
@@ -355,29 +326,25 @@ a:focus-visible {
   gap: 10px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 8px;
-  margin-top: 4px;
 }
 
-/* Style de l'icône SVG */
 .nav-dropdown-logout svg {
   width: 18px;
   height: 18px;
-  stroke: #94a3b8; /* Gris doux par défaut */
+  stroke: #94a3b8;
   transition: stroke 0.2s ease;
 }
 
-/* Hover effect : Changement subtil vers le rouge */
 .nav-dropdown-logout:hover {
-  background: #fff1f2; /* Rose très pâle */
-  color: #e11d48;     /* Rose/Rouge moderne */
+  background: #fff1f2;
+  color: #e11d48;
 }
 
 .nav-dropdown-logout:hover svg {
-  stroke: #e11d48;    /* L'icône change aussi de couleur */
+  stroke: #e11d48;
   transform: translateX(1px);
 }
 
-/* Active effect pour le clic */
 .nav-dropdown-logout:active {
   transform: scale(0.98);
 }

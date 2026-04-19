@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import PaymentModal from "./PaymentModal";
 import "./Forfaits.css";
 
-// ── Icônes ─────────────────────────────────
+// ── Icônes SVG ─────────────────────────────────
 
 const IconFree = () => (
   <svg
@@ -65,6 +65,90 @@ const IconCheck = () => (
   </svg>
 );
 
+const IconToken = () => (
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 6v12M9 9h4.5a2.5 2.5 0 0 1 0 5H9" />
+  </svg>
+);
+
+const IconEmail = () => (
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <rect width="20" height="16" x="2" y="4" rx="2" />
+    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+  </svg>
+);
+
+const IconChat = () => (
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+const IconPdf = () => (
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="9" y1="15" x2="15" y2="15" />
+  </svg>
+);
+
+const IconRefill = () => (
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <polyline points="23 4 23 10 17 10" />
+    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+  </svg>
+);
+
+const IconInfinity = () => (
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <path d="M12 12c-2-2.5-4-4-6-4a4 4 0 0 0 0 8c2 0 4-1.5 6-4z" />
+    <path d="M12 12c2 2.5 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.5-6 4z" />
+  </svg>
+);
+
 const PLAN_ICONS = {
   gratuit: IconFree,
   pro: IconPro,
@@ -81,11 +165,16 @@ const plans = [
     priceRaw: 0,
     period: "/mois",
     color: "#6b7280",
+    tokenInfo: "100 tokens offerts",
     features: [
-      "3 analyses / semaine",
-      "Score de sécurité",
-      "Détection phishing IA",
-      "Historique 7 jours",
+      { icon: IconToken, text: "100 tokens à l'inscription" },
+      { icon: IconRefill, text: "+30 tokens / semaine" },
+      { icon: IconEmail, text: "10 tokens = 1 analyse email" },
+      { icon: IconChat, text: "2 tokens = 1 message chat" },
+      { icon: IconPdf, text: "5 tokens = export PDF" },
+      { icon: IconCheck, text: "Score de sécurité" },
+      { icon: IconCheck, text: "Détection phishing IA" },
+      { icon: IconCheck, text: "Historique 7 jours" },
     ],
     cta: "Plan actuel",
     disabled: true,
@@ -98,13 +187,18 @@ const plans = [
     period: "/mois",
     color: "#4f46e5",
     popular: true,
+    tokenInfo: "+500 tokens à l'achat",
     features: [
-      "50 analyses / semaine",
-      "Score de sécurité",
-      "Détection phishing IA",
-      "Historique illimité",
-      "Assistant IA prioritaire",
-      "Support email",
+      { icon: IconToken, text: "+500 tokens à l'achat" },
+      { icon: IconRefill, text: "+30 tokens / semaine" },
+      { icon: IconEmail, text: "10 tokens = 1 analyse email" },
+      { icon: IconChat, text: "2 tokens = 1 message chat" },
+      { icon: IconPdf, text: "5 tokens = export PDF" },
+      { icon: IconCheck, text: "Score de sécurité" },
+      { icon: IconCheck, text: "Détection phishing IA" },
+      { icon: IconCheck, text: "Historique illimité" },
+      { icon: IconCheck, text: "Assistant IA prioritaire" },
+      { icon: IconCheck, text: "Support email" },
     ],
     cta: "Choisir Pro",
     disabled: false,
@@ -116,32 +210,77 @@ const plans = [
     priceRaw: 20,
     period: "/mois",
     color: "#059669",
+    tokenInfo: "Analyses illimitées",
     features: [
-      "Analyses illimitées",
-      "Score de sécurité",
-      "Détection phishing IA",
-      "Historique illimité",
-      "Assistant IA prioritaire",
-      "Accès API",
-      "Support prioritaire 24/7",
-      "Tableau de bord équipe",
+      { icon: IconInfinity, text: "Analyses illimitées" },
+      { icon: IconInfinity, text: "Chat illimité" },
+      { icon: IconInfinity, text: "Export PDF illimité" },
+      { icon: IconCheck, text: "Score de sécurité" },
+      { icon: IconCheck, text: "Détection phishing IA" },
+      { icon: IconCheck, text: "Historique illimité" },
+      { icon: IconCheck, text: "Assistant IA prioritaire" },
+      { icon: IconCheck, text: "Accès API" },
+      { icon: IconCheck, text: "Support prioritaire 24/7" },
+      { icon: IconCheck, text: "Tableau de bord équipe" },
     ],
     cta: "Choisir Business",
     disabled: false,
   },
 ];
 
+// ── Token Banner ─────────────────────────────────
+
+const TokenBanner = ({ plan }) => (
+  <div
+    style={{
+      background: `${plan.color}18`,
+      border: `1px solid ${plan.color}44`,
+      borderRadius: "8px",
+      padding: "8px 12px",
+      marginBottom: "16px",
+      display: "flex",
+      alignItems: "center",
+      gap: "6px",
+      fontSize: "13px",
+      fontWeight: "600",
+      color: plan.color,
+    }}
+  >
+    <IconToken />
+    {plan.tokenInfo}
+  </div>
+);
+
+// ── Cost Tag ─────────────────────────────────
+
+const CostTag = ({ icon: Icon, label, cost }) => (
+  <div
+    style={{
+      background: "#f8fafc",
+      border: "1px solid #e2e8f0",
+      borderRadius: "8px",
+      padding: "6px 12px",
+      fontSize: "12px",
+      color: "#475569",
+      display: "flex",
+      alignItems: "center",
+      gap: "5px",
+    }}
+  >
+    <Icon />
+    <span style={{ fontWeight: 600 }}>{cost}</span> — {label}
+  </div>
+);
+
 // ── Component ─────────────────────────────────
 
 export default function Forfaits() {
   const navigate = useNavigate();
-
-  // état pour ouvrir le modal de paiement
   const [selectedPlan, setSelectedPlan] = useState(null);
 
   const handleSuccess = (plan) => {
     console.log("Paiement réussi :", plan.name);
-    navigate("/dashboard"); // redirection après paiement
+    navigate("/dashboard");
   };
 
   return (
@@ -154,9 +293,28 @@ export default function Forfaits() {
         <div className="forfaits-header">
           <h1>Choisissez votre forfait</h1>
           <p>
-            Vous avez utilisé toutes vos analyses gratuites. Passez à un plan
+            Vous avez utilisé tous vos tokens. Rechargez ou passez à un plan
             supérieur pour continuer.
           </p>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              justifyContent: "center",
+              marginTop: "14px",
+              flexWrap: "wrap",
+            }}
+          >
+            <CostTag icon={IconEmail} label="Analyse email" cost="10 tokens" />
+            <CostTag icon={IconChat} label="Message chat" cost="2 tokens" />
+            <CostTag icon={IconPdf} label="Export PDF" cost="5 tokens" />
+            <CostTag
+              icon={IconRefill}
+              label="Refill / semaine"
+              cost="+30 tokens"
+            />
+          </div>
         </div>
 
         <div className="forfaits-cards">
@@ -186,13 +344,18 @@ export default function Forfaits() {
                   <span className="period">{plan.period}</span>
                 </div>
 
+                <TokenBanner plan={plan} />
+
                 <ul className="forfait-features">
-                  {plan.features.map((f, i) => (
-                    <li key={i}>
-                      <IconCheck />
-                      {f}
-                    </li>
-                  ))}
+                  {plan.features.map((f, i) => {
+                    const FeatureIcon = f.icon;
+                    return (
+                      <li key={i}>
+                        <FeatureIcon />
+                        {f.text}
+                      </li>
+                    );
+                  })}
                 </ul>
 
                 <button
@@ -212,7 +375,6 @@ export default function Forfaits() {
         </p>
       </div>
 
-      {/* Modal de paiement */}
       {selectedPlan && (
         <PaymentModal
           plan={selectedPlan}

@@ -2,22 +2,52 @@ import { getToken } from "./authService";
 
 const AUTH_API = "/auth-api";
 
-async function hashContent(text) {
-  const buffer = await crypto.subtle.digest(
+// ============================================================
+// ✅ HASH UNIQUE — utilisé partout (saveAnalysis + checkIfEmailSaved)
+// ============================================================
+export async function generateContentHash(content) {
+  const hashBuffer = await crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(text)
+    new TextEncoder().encode((content || "").substring(0, 5000))
   );
-  return Array.from(new Uint8Array(buffer))
+  return Array.from(new Uint8Array(hashBuffer))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
 
+// ============================================================
+// ✅ CHECK si email deja dans MongoDB (via endpoint check-hash)
+// ============================================================
+export async function checkIfEmailSaved(emlContent) {
+  const token = getToken();
+  if (!token) return false;
+
+  try {
+    const hash = await generateContentHash(emlContent);
+    const res = await fetch(`${AUTH_API}/api/emails/check-hash`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ contentHash: hash }),
+    });
+    const data = await res.json();
+    return data.exists === true;
+  } catch {
+    return false;
+  }
+}
+
+// ============================================================
+// 💾 SAVE ANALYSIS
+// ============================================================
 export async function saveAnalysis(emlName, report, meta, emlContent) {
   const token = getToken();
   if (!token) return null;
 
   try {
-    const contentHash = await hashContent(emlContent || emlName || "");
+    const contentHash = await generateContentHash(emlContent || emlName || "");
 
     const verdictMap = {
       SAFE: "Propre",
@@ -61,6 +91,9 @@ export async function saveAnalysis(emlName, report, meta, emlContent) {
   }
 }
 
+// ============================================================
+// 📋 HISTORY / STATS / DELETE
+// ============================================================
 export async function getHistory(page = 1, limit = 10) {
   const token = getToken();
   if (!token) return { emails: [], pagination: {} };
@@ -96,6 +129,9 @@ export async function getStats() {
   return data.success ? data.data : null;
 }
 
+// ============================================================
+// 🛠️ HELPERS INTERNES
+// ============================================================
 function _extractAuth(checks = [], proto) {
   const c = checks.find((c) => c.message?.toUpperCase().includes(proto));
   if (!c) return "unknown";
@@ -113,22 +149,14 @@ function _buildThreats(report) {
     .filter((c) => c.status === "danger")
     .slice(0, 5)
     .forEach((c) =>
-      threats.push({
-        icon: "🔴",
-        text: c.message,
-        level: "high",
-      })
+      threats.push({ icon: "🔴", text: c.message, level: "high" })
     );
 
   checks
     .filter((c) => c.status === "warn")
     .slice(0, 3)
     .forEach((c) =>
-      threats.push({
-        icon: "🟡",
-        text: c.message,
-        level: "medium",
-      })
+      threats.push({ icon: "🟡", text: c.message, level: "medium" })
     );
 
   return threats;

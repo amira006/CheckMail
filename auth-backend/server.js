@@ -21,9 +21,27 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("Connecté à MongoDB"))
   .catch((err) => console.error("Erreur de connexion MongoDB:", err));
+
 const PLANS = {
   pro: { price: 500, name: "Pro" },
   business: { price: 1500, name: "Business" },
+};
+
+// ============================================================
+// 🪙 TOKEN CONFIG
+// ============================================================
+const TOKEN_COSTS = {
+  analyze: 10,
+  chat: 2,
+  pdf: 5,
+};
+
+const WEEKLY_REFILL = 30;
+
+const PLAN_TOKENS = {
+  gratuit: 100,
+  pro: 500,
+  business: 500,
 };
 
 // ============================================================
@@ -41,6 +59,7 @@ const transporter = nodemailer.createTransport({
 // 👤 MODÈLE UTILISATEUR
 // ============================================================
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
@@ -53,10 +72,13 @@ const userSchema = new mongoose.Schema({
     enum: ["gratuit", "pro", "business"],
     default: "gratuit",
   },
-  analysisCount: { type: Number, default: 0 },
-  lastReset: { type: Date, default: Date.now },
+  tokens: { type: Number, default: 100 },
+  lastTokenRefill: { type: Date, default: Date.now },
+  dataConsent: { type: Boolean, default: null },
+  dataConsentDate: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
 });
+
 const User = mongoose.model("User", userSchema);
 
 // ============================================================
@@ -107,19 +129,45 @@ const validatePassword = (password) => {
   return null;
 };
 
-// ── Helper : reset quotidien si besoin ──
-const resetDailyIfNeeded = async (user) => {
+const refillWeeklyIfNeeded = async (user) => {
+  if (user.plan === "business") return;
   const now = new Date();
-  const diffHours = (now - new Date(user.lastReset)) / (1000 * 60 * 60);
+  const diffHours = (now - new Date(user.lastTokenRefill)) / (1000 * 60 * 60);
   if (diffHours >= 168) {
-    user.analysisCount = 0;
-    user.lastReset = now;
+    user.tokens += WEEKLY_REFILL;
+    user.lastTokenRefill = now;
     await user.save();
   }
 };
 
-// ── Helper : limites par plan ──
-const PLAN_LIMITS = { gratuit: 3, pro: 50, business: Infinity };
+const deductTokens = (cost) => async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    await refillWeeklyIfNeeded(user);
+
+    if (user.plan === "business") {
+      req.tokensLeft = "illimité";
+      return next();
+    }
+
+    if (user.tokens < cost) {
+      return res.status(403).json({
+        success: false,
+        message: `Tokens insuffisants. Il vous faut ${cost} tokens (vous avez ${user.tokens}).`,
+        data: { tokens: user.tokens, needed: cost, allowed: false },
+      });
+    }
+
+    user.tokens -= cost;
+    await user.save();
+    req.tokensLeft = user.tokens;
+    next();
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Erreur serveur (tokens)" });
+  }
+};
 
 // ============================================================
 // 🔒 MIDDLEWARE JWT
@@ -165,8 +213,6 @@ app.post("/api/auth/register", async (req, res) => {
       return res.status(400).json({ success: false, message: passwordError });
 
     const hashedPassword = await bcrypt.hash(password, 12);
-
-    // ✅ Generate default avatar with ui-avatars
     const defaultPicture = `https://ui-avatars.com/api/?name=${encodeURIComponent(
       name
     )}&background=4f46e5&color=fff&size=128`;
@@ -175,7 +221,8 @@ app.post("/api/auth/register", async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      picture: defaultPicture, // ✅ Save in DB
+      picture: defaultPicture,
+      tokens: PLAN_TOKENS.gratuit,
     });
 
     const token = generateToken(newUser._id);
@@ -186,50 +233,14 @@ app.post("/api/auth/register", async (req, res) => {
         id: newUser._id,
         name,
         email,
-        picture: defaultPicture, // ✅ Return in response
+        picture: defaultPicture,
+        tokens: newUser.tokens,
       },
     });
   } catch (error) {
     res
       .status(500)
       .json({ success: false, message: "Erreur lors de l'inscription" });
-  }
-});
-app.post("/api/payment/create-checkout-session", protect, async (req, res) => {
-  try {
-    const { plan } = req.body;
-
-    if (!PLANS[plan]) {
-      return res.status(400).json({ success: false, message: "Plan invalide" });
-    }
-
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      mode: "payment",
-      line_items: [
-        {
-          price_data: {
-            currency: "eur",
-            product_data: {
-              name: `Plan ${PLANS[plan].name}`,
-            },
-            unit_amount: PLANS[plan].price,
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${process.env.FRONTEND_URL}/success`,
-      cancel_url: `${process.env.FRONTEND_URL}/cancel`,
-      metadata: {
-        userId: req.user._id.toString(),
-        plan,
-      },
-    });
-
-    res.json({ url: session.url });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Erreur paiement" });
   }
 });
 
@@ -258,6 +269,7 @@ app.post("/api/auth/login", async (req, res) => {
         name: user.name,
         email: user.email,
         picture: user.picture,
+        tokens: user.plan === "business" ? "illimité" : user.tokens,
       },
     });
   } catch (error) {
@@ -294,6 +306,7 @@ app.post("/api/auth/google", async (req, res) => {
         email,
         password: "google-auth",
         picture: payload.picture || null,
+        tokens: PLAN_TOKENS.gratuit,
       });
     } else {
       user.picture = payload.picture || user.picture;
@@ -309,6 +322,7 @@ app.post("/api/auth/google", async (req, res) => {
         name: user.name,
         email: user.email,
         picture: payload.picture || null,
+        tokens: user.plan === "business" ? "illimité" : user.tokens,
       },
     });
   } catch (error) {
@@ -321,7 +335,6 @@ app.post("/api/auth/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email });
-
     if (!user)
       return res
         .status(200)
@@ -333,9 +346,8 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     await user.save();
 
     const resetLink = `http://localhost:3000/reset-password?token=${token}`;
-
     await transporter.sendMail({
-      from: `"SecureMail" <${process.env.EMAIL_USER}>`,
+      from: `"CheckMail" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Réinitialisation de votre mot de passe",
       html: `
@@ -349,7 +361,7 @@ app.post("/api/auth/forgot-password", async (req, res) => {
           <p style="color: #888; font-size: 13px;">Ce lien expire dans <strong>1 heure</strong>.</p>
           <p style="color: #888; font-size: 13px;">Si vous n'avez pas fait cette demande, ignorez cet email.</p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
-          <p style="color: #aaa; font-size: 12px;">© SecureMail — Ne pas répondre à cet email.</p>
+          <p style="color: #aaa; font-size: 12px;">© CheckMail — Ne pas répondre à cet email.</p>
         </div>
       `,
     });
@@ -394,29 +406,72 @@ app.get("/api/auth/me", protect, (req, res) => {
 });
 
 // ============================================================
-// 📊 ROUTES PLAN / QUOTA
+// ✅ ROUTES CONSENT
 // ============================================================
 
-// ── Vérifier le quota (lecture seule) ──
+app.get("/api/user/consent", protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select(
+      "dataConsent dataConsentDate"
+    );
+    res.json({
+      success: true,
+      data: {
+        consent: user.dataConsent ?? null,
+        consentDate: user.dataConsentDate ?? null,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Erreur serveur" });
+  }
+});
+
+app.post("/api/user/consent", protect, async (req, res) => {
+  try {
+    const { consent } = req.body;
+    if (typeof consent !== "boolean")
+      return res
+        .status(400)
+        .json({ success: false, message: "Valeur invalide" });
+
+    await User.findByIdAndUpdate(req.user._id, {
+      dataConsent: consent,
+      dataConsentDate: new Date(),
+    });
+
+    res.json({
+      success: true,
+      data: { consent, consentDate: new Date() },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Erreur serveur" });
+  }
+});
+
+// ============================================================
+// 🪙 ROUTES TOKENS / PLAN
+// ============================================================
+
 app.get("/api/plan/check", protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    await resetDailyIfNeeded(user);
+    await refillWeeklyIfNeeded(user);
 
-    const limit = PLAN_LIMITS[user.plan];
-    const allowed = user.analysisCount < limit;
-    const remaining = Math.max(
-      0,
-      limit === Infinity ? 999 : limit - user.analysisCount
-    );
+    const isBusiness = user.plan === "business";
+    const allowed = isBusiness || user.tokens >= TOKEN_COSTS.analyze;
+
+    const nextRefill = new Date(user.lastTokenRefill);
+    nextRefill.setDate(nextRefill.getDate() + 7);
 
     res.json({
       success: true,
       data: {
         plan: user.plan,
-        analysisCount: user.analysisCount,
-        limit: limit === Infinity ? "illimité" : limit,
-        remaining,
+        tokens: user.tokens,
+        unlimited: isBusiness,
+        tokenCosts: TOKEN_COSTS,
+        weeklyRefill: WEEKLY_REFILL,
+        nextRefillDate: nextRefill,
         allowed,
       },
     });
@@ -425,78 +480,52 @@ app.get("/api/plan/check", protect, async (req, res) => {
   }
 });
 
-// ✅ NOUVELLE ROUTE SÉCURISÉE : Check + Incrément atomique avant analyse
-// Cette route REMPLACE les anciens /check + /increment séparés côté client.
-// Le frontend appelle cette route AVANT de lancer l'analyse.
-// Si la réponse est success:false → quota dépassé, on n'analyse pas.
-// Si success:true → le quota est déjà incrémenté, on lance l'analyse.
-app.post("/api/plan/analyze", protect, async (req, res) => {
-  try {
-    // Récupérer le document complet (pas la version select("-password") du middleware)
-    const user = await User.findById(req.user._id);
-
-    // Reset quotidien automatique
-    await resetDailyIfNeeded(user);
-
-    const limit = PLAN_LIMITS[user.plan];
-
-    // ── Refus si quota dépassé ──
-    if (user.analysisCount >= limit) {
-      return res.status(403).json({
-        success: false,
-        message: "Quota dépassé. Passez à un forfait supérieur.",
-        data: {
-          plan: user.plan,
-          analysisCount: user.analysisCount,
-          limit: limit === Infinity ? "illimité" : limit,
-          remaining: 0,
-          allowed: false,
-        },
-      });
-    }
-
-    // ── Autoriser et incrémenter en même temps ──
-    user.analysisCount += 1;
-    await user.save();
-
-    const remaining = Math.max(
-      0,
-      limit === Infinity ? 999 : limit - user.analysisCount
-    );
-
+app.post(
+  "/api/plan/analyze",
+  protect,
+  deductTokens(TOKEN_COSTS.analyze),
+  async (req, res) => {
     res.json({
       success: true,
       data: {
-        plan: user.plan,
-        analysisCount: user.analysisCount,
-        limit: limit === Infinity ? "illimité" : limit,
-        remaining,
-        allowed: remaining > 0,
+        plan: req.user.plan,
+        tokens: req.tokensLeft,
+        tokenCost: TOKEN_COSTS.analyze,
+        allowed: true,
       },
     });
-  } catch (error) {
-    console.error("Erreur /api/plan/analyze:", error);
-    res.status(500).json({ success: false, message: "Erreur serveur" });
   }
-});
+);
 
-// ── [DÉPRÉCIÉE] Incrémenter après analyse — gardée pour compatibilité mais ne plus utiliser ──
-// Utiliser /api/plan/analyze à la place.
+app.post(
+  "/api/plan/chat-token",
+  protect,
+  deductTokens(TOKEN_COSTS.chat),
+  async (req, res) => {
+    res.json({
+      success: true,
+      data: { tokens: req.tokensLeft, tokenCost: TOKEN_COSTS.chat },
+    });
+  }
+);
+
+app.post(
+  "/api/plan/pdf-token",
+  protect,
+  deductTokens(TOKEN_COSTS.pdf),
+  async (req, res) => {
+    res.json({
+      success: true,
+      data: { tokens: req.tokensLeft, tokenCost: TOKEN_COSTS.pdf },
+    });
+  }
+);
+
 app.post("/api/plan/increment", protect, async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    const limit = PLAN_LIMITS[user.plan];
-
-    if (user.analysisCount >= limit)
-      return res.status(403).json({ success: false, message: "Quota dépassé" });
-
-    user.analysisCount += 1;
-    await user.save();
-
-    res.json({ success: true, data: { analysisCount: user.analysisCount } });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Erreur serveur" });
-  }
+  res.status(410).json({
+    success: false,
+    message: "Route dépréciée. Utiliser /api/plan/analyze",
+  });
 });
 
 // ============================================================
@@ -522,17 +551,19 @@ app.post("/api/emails/save", protect, async (req, res) => {
     let email = await Email.findOne({ userId: req.user._id, contentHash });
 
     if (email) {
-      email.score = score;
-      email.verdict = verdict;
-      email.subject = subject;
-      email.senderEmail = senderEmail;
-      email.bodyPreview = bodyPreview;
-      email.contentHash = contentHash;
-      email.status = status;
-      email.headers = headers;
-      email.threats = threats;
-      email.urls = urls;
-      email.createdAt = new Date();
+      Object.assign(email, {
+        score,
+        verdict,
+        subject,
+        senderEmail,
+        bodyPreview,
+        contentHash,
+        status,
+        headers,
+        threats,
+        urls,
+        createdAt: new Date(),
+      });
       await email.save();
     } else {
       email = await Email.create({
@@ -585,33 +616,52 @@ app.get("/api/emails", protect, async (req, res) => {
   }
 });
 
+app.get("/api/emails/stats", protect, async (req, res) => {
+  try {
+    const total = await Email.countDocuments({ userId: req.user._id });
+    const safe = await Email.countDocuments({
+      userId: req.user._id,
+      verdict: "SAFE",
+    });
+    const suspect = await Email.countDocuments({
+      userId: req.user._id,
+      verdict: "SUSPICIOUS",
+    });
+    const dangerous = await Email.countDocuments({
+      userId: req.user._id,
+      verdict: "DANGEROUS",
+    });
+    res.json({ success: true, data: { total, safe, suspect, dangerous } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Erreur stats" });
+  }
+});
+
+// ============================================================
+// ✅ NOUVEAU — check si email deja analysé par hash
+// ============================================================
+app.post("/api/emails/check-hash", protect, async (req, res) => {
+  try {
+    const { contentHash } = req.body;
+    if (!contentHash) return res.json({ success: true, exists: false });
+
+    const existing = await Email.findOne({
+      userId: req.user._id,
+      contentHash,
+    });
+
+    res.json({ success: true, exists: !!existing });
+  } catch (error) {
+    res.status(500).json({ success: false, exists: false });
+  }
+});
+
 app.delete("/api/emails/:id", protect, async (req, res) => {
   try {
     await Email.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: "Erreur suppression" });
-  }
-});
-
-app.get("/api/emails/stats", protect, async (req, res) => {
-  try {
-    const total = await Email.countDocuments({ userId: req.user._id });
-    const safe = await Email.countDocuments({
-      userId: req.user._id,
-      verdict: "Propre",
-    });
-    const suspect = await Email.countDocuments({
-      userId: req.user._id,
-      verdict: "Suspect",
-    });
-    const dangerous = await Email.countDocuments({
-      userId: req.user._id,
-      verdict: "Infecté",
-    });
-    res.json({ success: true, data: { total, safe, suspect, dangerous } });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Erreur stats" });
   }
 });
 
@@ -651,12 +701,47 @@ app.get("/api/chat/:emailId", protect, async (req, res) => {
     res.status(500).json({ success: false, message: "Erreur récupération" });
   }
 });
+
+// ============================================================
+// 💳 STRIPE PAYMENT
+// ============================================================
+
+app.post("/api/payment/create-checkout-session", protect, async (req, res) => {
+  try {
+    const { plan } = req.body;
+    if (!PLANS[plan])
+      return res.status(400).json({ success: false, message: "Plan invalide" });
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "eur",
+            product_data: { name: `Plan ${PLANS[plan].name}` },
+            unit_amount: PLANS[plan].price,
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${process.env.FRONTEND_URL}/success`,
+      cancel_url: `${process.env.FRONTEND_URL}/cancel`,
+      metadata: { userId: req.user._id.toString(), plan },
+    });
+
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Erreur paiement" });
+  }
+});
+
 app.post(
   "/api/payment/webhook",
   express.raw({ type: "application/json" }),
   async (req, res) => {
     let event;
-
     try {
       event = stripe.webhooks.constructEvent(
         req.body,
@@ -669,37 +754,39 @@ app.post(
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-
       const userId = session.metadata.userId;
       const plan = session.metadata.plan;
+      const tokensToAdd = PLAN_TOKENS[plan] || 0;
 
       await User.findByIdAndUpdate(userId, {
-        plan: plan,
+        plan,
+        $inc: { tokens: tokensToAdd },
       });
 
-      console.log("💳 Paiement OK → plan:", plan);
+      console.log(`💳 Paiement OK → plan: ${plan} | +${tokensToAdd} tokens`);
     }
 
     res.json({ received: true });
   }
 );
-// ============================================================
-// 💳 PAIEMENT LOCAL (DEV ONLY - sans Stripe)
-// ============================================================
+
 app.post("/api/payment/fake-upgrade", protect, async (req, res) => {
   try {
     const { plan } = req.body;
-
-    if (!["pro", "business"].includes(plan)) {
+    if (!["pro", "business"].includes(plan))
       return res.status(400).json({ success: false, message: "Plan invalide" });
-    }
 
-    await User.findByIdAndUpdate(req.user._id, { plan });
+    const tokensToAdd = PLAN_TOKENS[plan] || 0;
+    await User.findByIdAndUpdate(req.user._id, {
+      plan,
+      $inc: { tokens: tokensToAdd },
+    });
 
     res.json({
       success: true,
-      message: `Plan mis à jour : ${plan}`,
+      message: `Plan mis à jour : ${plan} | +${tokensToAdd} tokens ajoutés`,
       plan,
+      tokensAdded: tokensToAdd,
     });
   } catch (err) {
     console.error("Erreur fake-upgrade:", err);

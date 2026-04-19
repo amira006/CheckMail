@@ -1,8 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Results.css";
-import { saveAnalysis } from "./emailService";
+import { saveAnalysis, checkIfEmailSaved } from "./emailService";
 import { saveMessage, getChatHistory } from "./chatService";
+import { getToken } from "./authService";
+
+// ============================================================
+// 🛠️ HELPERS
+// ============================================================
 
 function decodeMimeHeader(str) {
   if (!str) return str;
@@ -31,9 +36,9 @@ function parseMarkdown(text) {
   if (!text) return "";
   return text
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^*\n]+?)\*/g, "<em>$1</em>")
+    .replace(/[*]([^*\n]+?)[*]/g, "<em>$1</em>")
     .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/^[\*\-]\s+(.+)$/gm, "<li>$1</li>")
+    .replace(/^[-] +(.+)$/gm, "<li>$1</li>")
     .replace(
       /(<li>[\s\S]*?<\/li>)(\n<li>[\s\S]*?<\/li>)*/g,
       (m) => `<ul>${m}</ul>`
@@ -42,9 +47,64 @@ function parseMarkdown(text) {
     .replace(/(<br\/>){2,}/g, "<br/>");
 }
 
+// ============================================================
+// ✅ CONSENT API HELPER
+// ============================================================
+
+const saveConsentToDB = async (consent) => {
+  const token = getToken();
+  if (!token) return;
+  try {
+    await fetch("/auth-api/api/user/consent", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ consent }),
+    });
+  } catch {}
+};
+
+// ============================================================
+// 🪙 TOKEN HELPERS
+// ============================================================
+
+const deductChatToken = async () => {
+  const token = getToken();
+  if (!token) return { success: true };
+  try {
+    const res = await fetch("/auth-api/api/plan/chat-token", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await res.json();
+  } catch {
+    return { success: true };
+  }
+};
+
+const deductPdfToken = async () => {
+  const token = getToken();
+  if (!token) return { success: true };
+  try {
+    const res = await fetch("/auth-api/api/plan/pdf-token", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await res.json();
+  } catch {
+    return { success: true };
+  }
+};
+
+// ============================================================
+// 🎨 SUB-COMPONENTS
+// ============================================================
+
 function ScoreRing({ score, color }) {
-  const r = 42,
-    circ = 2 * Math.PI * r;
+  const r = 42;
+  const circ = 2 * Math.PI * r;
   const offset = circ - (score / 100) * circ;
   return (
     <svg
@@ -95,16 +155,259 @@ function SendIcon() {
   );
 }
 
-function BotIcon() {
+function BotIcon({ size = 50 }) {
   return (
     <img
       src="/robott.png"
       alt="robot"
       className="robot-icon"
-      style={{ width: 50, height: 50, objectFit: "contain" }}
+      style={{
+        width: size,
+        height: size,
+        objectFit: "contain",
+        display: "block",
+      }}
     />
   );
 }
+
+function TokenBadge({ tokens }) {
+  if (tokens === null || tokens === undefined) return null;
+  const isUnlimited = tokens === "illimité";
+  const isLow = !isUnlimited && tokens <= 20;
+
+  let cls = "rp-token-badge";
+  if (isUnlimited) cls += " unlimited";
+  else if (isLow) cls += " low";
+
+  return (
+    <div className={cls}>
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          background: "currentColor",
+          flexShrink: 0,
+          display: "inline-block",
+        }}
+      />
+      {isUnlimited ? "Illimité" : `${tokens} tokens`}
+    </div>
+  );
+}
+
+// ============================================================
+// ✅ CONSENT MODAL
+// ============================================================
+
+function ConsentModal({ onAccept, onDecline }) {
+  const items = [
+    "Expéditeur et objet de l'email",
+    "Score de sécurité et verdict",
+    "Liens et pièces jointes détectés",
+  ];
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 2000,
+      }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 16,
+          padding: "1.75rem",
+          maxWidth: 420,
+          width: "90%",
+          border: "0.5px solid rgba(0,0,0,0.1)",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+        }}
+      >
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: "50%",
+            background: "rgba(37,99,235,0.1)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: "1rem",
+          }}
+        >
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#2563EB"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+        </div>
+
+        <h2
+          style={{
+            fontSize: 17,
+            fontWeight: 600,
+            marginBottom: 8,
+            color: "#1e293b",
+          }}
+        >
+          Autoriser l'enregistrement des données ?
+        </h2>
+        <p
+          style={{
+            fontSize: 13,
+            color: "#64748b",
+            lineHeight: 1.6,
+            marginBottom: "1.25rem",
+          }}
+        >
+          CheckMail souhaite enregistrer les métadonnées de cet email pour
+          améliorer la détection des menaces. Aucun contenu de l'email ne sera
+          stocké.
+        </p>
+
+        <div
+          style={{
+            background: "#f8fafc",
+            borderRadius: 10,
+            padding: "10px 14px",
+            marginBottom: "1.25rem",
+          }}
+        >
+          {items.map((item, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 12,
+                color: "#64748b",
+                padding: "3px 0",
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: "#2563EB",
+                  flexShrink: 0,
+                  display: "inline-block",
+                }}
+              />
+              {item}
+            </div>
+          ))}
+          <div
+            style={{
+              borderTop: "1px solid #e2e8f0",
+              marginTop: 8,
+              paddingTop: 8,
+            }}
+          >
+            {[
+              "Données anonymisées et chiffrées",
+              "Aucun contenu email stocké",
+            ].map((t, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 12,
+                  color: "#059669",
+                  padding: "2px 0",
+                }}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#059669"
+                  strokeWidth="2.5"
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+                {t}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={onDecline}
+            style={{
+              flex: 1,
+              padding: "10px",
+              borderRadius: 10,
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: "pointer",
+              border: "0.5px solid #e2e8f0",
+              background: "#fff",
+              color: "#374151",
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.background = "#f8fafc")}
+            onMouseOut={(e) => (e.currentTarget.style.background = "#fff")}
+          >
+            Refuser
+          </button>
+          <button
+            onClick={onAccept}
+            style={{
+              flex: 1,
+              padding: "10px",
+              borderRadius: 10,
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: "pointer",
+              border: "none",
+              background: "#2563EB",
+              color: "#fff",
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.background = "#1E40AF")}
+            onMouseOut={(e) => (e.currentTarget.style.background = "#2563EB")}
+          >
+            Autoriser
+          </button>
+        </div>
+
+        <p
+          style={{
+            fontSize: 11,
+            color: "#94a3b8",
+            textAlign: "center",
+            marginTop: 10,
+          }}
+        >
+          Vous pouvez changer ce choix à tout moment dans vos paramètres
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 🚀 MAIN COMPONENT
+// ============================================================
 
 export default function Results({ emlData, onBack }) {
   const navigate = useNavigate();
@@ -117,6 +420,11 @@ export default function Results({ emlData, onBack }) {
   const [history, setHistory] = useState([]);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [emailId, setEmailId] = useState(null);
+  const [userTokens, setUserTokens] = useState(null);
+
+  const [showConsent, setShowConsent] = useState(false);
+  const [pendingReport, setPendingReport] = useState(null);
+  const [pendingMeta, setPendingMeta] = useState(null);
 
   const msgsRef = useRef();
 
@@ -141,15 +449,14 @@ export default function Results({ emlData, onBack }) {
     : {};
 
   useEffect(() => {
-    if (msgsRef.current && msgs.length > 0) {
-      msgsRef.current.scrollTop = 0;
-    }
+    if (msgsRef.current && msgs.length > 0) msgsRef.current.scrollTop = 0;
   }, [emailId]);
+
   useEffect(() => {
-    if (msgsRef.current) {
+    if (msgsRef.current)
       msgsRef.current.scrollTop = msgsRef.current.scrollHeight;
-    }
   }, [msgs]);
+
   useEffect(() => {
     if (!emlData?.content) {
       setMsgs([
@@ -164,6 +471,84 @@ export default function Results({ emlData, onBack }) {
     }
     runAnalysis();
   }, []); // eslint-disable-line
+
+  useEffect(() => {
+    const fetchTokens = async () => {
+      const token = getToken();
+      if (!token) return;
+      try {
+        const res = await fetch("/auth-api/api/plan/check", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (data.success) setUserTokens(data.data.tokens);
+      } catch {}
+    };
+    fetchTokens();
+  }, []);
+
+  // ============================================================
+  // ✅ SAVE ANALYSIS
+  // ============================================================
+
+  const doSaveAnalysis = async (rep, metaData) => {
+    try {
+      const saved = await saveAnalysis(
+        emlData.name,
+        rep,
+        metaData,
+        emlData.content
+      );
+      const savedId = saved?.id || null;
+      setEmailId(savedId);
+
+      if (savedId) {
+        const oldMsgs = await getChatHistory(savedId);
+        if (oldMsgs?.length > 0) {
+          setMsgs((prev) => [
+            ...prev,
+            ...oldMsgs.map((m) => ({
+              role: m.role === "user" ? "user" : "bot",
+              text: m.content,
+              chips: [],
+            })),
+          ]);
+          setHistory((prev) => [
+            ...prev,
+            ...oldMsgs.map((m) => ({
+              role: m.role === "user" ? "user" : "assistant",
+              content: m.content,
+            })),
+          ]);
+        }
+      }
+    } catch {}
+  };
+
+  // ============================================================
+  // ✅ CONSENT HANDLERS
+  // ============================================================
+
+  const handleConsentAccept = async () => {
+    await saveConsentToDB(true);
+    setShowConsent(false);
+    if (pendingReport && pendingMeta) {
+      await doSaveAnalysis(pendingReport, pendingMeta);
+    }
+    setPendingReport(null);
+    setPendingMeta(null);
+  };
+
+  const handleConsentDecline = () => {
+    saveConsentToDB(false);
+    setShowConsent(false);
+    setPendingReport(null);
+    setPendingMeta(null);
+  };
+
+  // ============================================================
+  // 🔍 ANALYSIS
+  // ============================================================
 
   const runAnalysis = async () => {
     setTyping(true);
@@ -180,7 +565,6 @@ export default function Results({ emlData, onBack }) {
       if (!res.ok) throw new Error(`Erreur ${res.status}`);
       const data = await res.json();
 
-      // ── Détection rate limit ──────────────────────────────────────────
       if (data.error === "rate_limit") {
         navigate("/forfaits");
         return;
@@ -212,30 +596,23 @@ export default function Results({ emlData, onBack }) {
       const sc = rep?.score ?? null;
       const vLabel =
         rep?.verdict === "SAFE"
-          ? "Email sûr "
+          ? "Email sûr"
           : rep?.verdict === "SUSPICIOUS"
-          ? "Suspect "
+          ? "Suspect"
           : rep?.verdict === "DANGEROUS"
-          ? "Dangereux "
-          : "Inconnu ";
+          ? "Dangereux"
+          : "Inconnu";
 
-      let chips;
-
-      if (rep?.score >= 70) {
-        chips = [
-          "Pourquoi il est sûr ?",
-          "Puis-je répondre ?",
-          "Détails techniques",
-        ];
-      } else if (rep?.score >= 40) {
-        chips = ["Pourquoi suspect ?", "Quels risques ?", "Que faire ?"];
-      } else {
-        chips = [
-          "Pourquoi dangereux ?",
-          "Supprimer email ?",
-          "Signaler phishing",
-        ];
-      }
+      let chips =
+        rep?.score >= 70
+          ? [
+              "Pourquoi il est sûr ?",
+              "Puis-je répondre ?",
+              "Détails techniques",
+            ]
+          : rep?.score >= 40
+          ? ["Pourquoi suspect ?", "Quels risques ?", "Que faire ?"]
+          : ["Pourquoi dangereux ?", "Supprimer email ?", "Signaler phishing"];
 
       let extraMsg =
         typeof data.result === "string"
@@ -264,6 +641,22 @@ export default function Results({ emlData, onBack }) {
         { role: "assistant", content: "Prêt." },
       ];
 
+      const authToken = getToken();
+      if (authToken) {
+        try {
+          const planRes = await fetch("/auth-api/api/plan/analyze", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${authToken}` },
+          });
+          const planData = await planRes.json();
+          if (!planData.success) {
+            navigate("/forfaits");
+            return;
+          }
+          setUserTokens(planData.data.tokens);
+        } catch {}
+      }
+
       const welcomeText = rep
         ? `Bonjour ! 👋 J'ai analysé votre email **${
             emlData?.name || ""
@@ -278,53 +671,24 @@ export default function Results({ emlData, onBack }) {
 
       setTyping(false);
       setBusy(false);
+      setMsgs([{ role: "bot", text: welcomeText, chips }]);
+      setHistory(baseContext);
 
-      if (!rep) {
-        setMsgs([{ role: "bot", text: welcomeText, chips }]);
-        setHistory(baseContext);
-        return;
-      }
-
-      try {
-        const saved = await saveAnalysis(
-          emlData.name,
-          rep,
-          meta,
-          emlData.content
-        );
-        const savedId = saved?.id || null;
-        setEmailId(savedId);
-
-        if (savedId) {
-          const oldMsgs = await getChatHistory(savedId);
-
-          if (oldMsgs?.length > 0) {
-            setMsgs([
-              { role: "bot", text: welcomeText, chips },
-              ...oldMsgs.map((m) => ({
-                role: m.role === "user" ? "user" : "bot",
-                text: m.content,
-                chips: [],
-              })),
-            ]);
-            setHistory([
-              ...baseContext,
-              ...oldMsgs.map((m) => ({
-                role: m.role === "user" ? "user" : "assistant",
-                content: m.content,
-              })),
-            ]);
-          } else {
-            setMsgs([{ role: "bot", text: welcomeText, chips }]);
-            setHistory(baseContext);
-          }
+      // ============================================================
+      // ✅ CONSENT LOGIC
+      // checkIfEmailSaved importé de emailService — même hash garanti
+      // ============================================================
+      if (rep) {
+        const alreadySaved = await checkIfEmailSaved(emlData.content);
+        if (alreadySaved) {
+          // Email deja sauvegardé → pas de modal
+          await doSaveAnalysis(rep, meta);
         } else {
-          setMsgs([{ role: "bot", text: welcomeText, chips }]);
-          setHistory(baseContext);
+          // Email nouveau → afficher modal
+          setPendingReport(rep);
+          setPendingMeta(meta);
+          setTimeout(() => setShowConsent(true), 1200);
         }
-      } catch (_) {
-        setMsgs([{ role: "bot", text: welcomeText, chips }]);
-        setHistory(baseContext);
       }
     } catch (e) {
       setTyping(false);
@@ -339,63 +703,94 @@ export default function Results({ emlData, onBack }) {
     }
   };
 
-  const sendMessage = useCallback(async () => {
-    const text = input.trim();
-    if (!text || typing) return;
-    setInput("");
-    setMsgs((p) => [
-      ...p.map((m) => ({ ...m, chips: [] })),
-      { role: "user", text },
-    ]);
+  // ============================================================
+  // 💬 SEND MESSAGE
+  // ============================================================
 
-    const newH = [
-      ...history.filter((m) => !m.content?.startsWith("[CTX]")),
-      { role: "user", content: text },
-    ];
-    setHistory((p) => [...p, { role: "user", content: text }]);
-    setTyping(true);
+  const sendMessage = useCallback(
+    async (overrideText) => {
+      const text = (
+        typeof overrideText === "string" ? overrideText : input
+      ).trim();
+      if (!text || typing) return;
+      setInput("");
 
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: newH.slice(-10),
-          report,
-          emlSnippet: emlData?.content?.substring(0, 2000),
-        }),
-      });
-      if (!res.ok) throw new Error(`Erreur ${res.status}`);
-      const data = await res.json();
-      const reply = data.reply || "Désolé, veuillez réessayer.";
-
-      // ── Détection rate limit dans le chat ────────────────────────────
-      if (reply === "__RATE_LIMIT__") {
-        setTyping(false);
+      const tokenResult = await deductChatToken();
+      if (tokenResult && !tokenResult.success) {
         navigate("/forfaits");
         return;
       }
+      if (tokenResult?.data?.tokens !== undefined)
+        setUserTokens(tokenResult.data.tokens);
 
-      setTyping(false);
-      setMsgs((p) => [...p, { role: "bot", text: reply, chips: [] }]);
-      setHistory((p) => [...p, { role: "assistant", content: reply }]);
-
-      if (emailId) {
-        saveMessage(emailId, "user", text);
-        saveMessage(emailId, "assistant", reply);
-      }
-    } catch (e) {
-      setTyping(false);
       setMsgs((p) => [
-        ...p,
-        { role: "bot", text: `Erreur : ${e.message}`, chips: [] },
+        ...p.map((m) => ({ ...m, chips: [] })),
+        { role: "user", text },
       ]);
-    }
-  }, [input, typing, report, history, emlData, emailId, navigate]);
+
+      const newH = [
+        ...history.filter((m) => !m.content?.startsWith("[CTX]")),
+        { role: "user", content: text },
+      ];
+      setHistory((p) => [...p, { role: "user", content: text }]);
+      setTyping(true);
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: newH.slice(-10),
+            report,
+            emlSnippet: emlData?.content?.substring(0, 2000),
+          }),
+        });
+        if (!res.ok) throw new Error(`Erreur ${res.status}`);
+        const data = await res.json();
+        const reply = data.reply || "Désolé, veuillez réessayer.";
+
+        if (reply === "__RATE_LIMIT__") {
+          setTyping(false);
+          navigate("/forfaits");
+          return;
+        }
+
+        setTyping(false);
+        setMsgs((p) => [...p, { role: "bot", text: reply, chips: [] }]);
+        setHistory((p) => [...p, { role: "assistant", content: reply }]);
+
+        if (emailId) {
+          saveMessage(emailId, "user", text);
+          saveMessage(emailId, "assistant", reply);
+        }
+      } catch (e) {
+        setTyping(false);
+        setMsgs((p) => [
+          ...p,
+          { role: "bot", text: `Erreur : ${e.message}`, chips: [] },
+        ]);
+      }
+    },
+    [input, typing, report, history, emlData, emailId, navigate]
+  );
+
+  // ============================================================
+  // 📄 PDF DOWNLOAD
+  // ============================================================
 
   const downloadPDF = async () => {
     if (!report) return alert("L'analyse n'est pas encore terminée.");
     setPdfBusy(true);
+
+    const tokenResult = await deductPdfToken();
+    if (tokenResult && !tokenResult.success) {
+      setPdfBusy(false);
+      navigate("/forfaits");
+      return;
+    }
+    if (tokenResult?.data?.tokens !== undefined)
+      setUserTokens(tokenResult.data.tokens);
+
     try {
       const res = await fetch("/api/report/export", {
         method: "POST",
@@ -416,6 +811,10 @@ export default function Results({ emlData, onBack }) {
       setPdfBusy(false);
     }
   };
+
+  // ============================================================
+  // 🎨 RENDER
+  // ============================================================
 
   const score = report?.score ?? null;
   const ringColor =
@@ -439,6 +838,13 @@ export default function Results({ emlData, onBack }) {
 
   return (
     <div className="rp-wrap">
+      {showConsent && (
+        <ConsentModal
+          onAccept={handleConsentAccept}
+          onDecline={handleConsentDecline}
+        />
+      )}
+
       <div className="rp-left">
         <div className="rp-header">
           <div>
@@ -520,31 +926,31 @@ export default function Results({ emlData, onBack }) {
 
       <div className="rp-chat">
         <div className="rp-chat-topbar">
-          <div className="rp-chat-topbar-icon">
-            <BotIcon />
-          </div>
+          <BotIcon size={60} />
+
           <div className="rp-chat-topbar-info">
             <h3>CheckMail</h3>
             <p>
               <span className="rp-dot" /> En ligne
             </p>
           </div>
-          {(typing || busy) && (
-            <span className="rp-thinking">Analyse en cours…</span>
-          )}
+          <div className="rp-topbar-right">
+            {(typing || busy) && (
+              <span className="rp-thinking">Analyse en cours…</span>
+            )}
+            <TokenBadge tokens={userTokens} />
+          </div>
         </div>
 
         <div className="rp-msgs" ref={msgsRef}>
           {msgs.map((m, i) => (
             <div key={i} className={`rp-msg ${m.role}`}>
               <div className="rp-msg-inner">
-                <div className="rp-msg-avatar">
-                  {m.role === "bot" ? <BotIcon /> : "V"}
-                </div>
                 <div className="rp-msg-content">
                   <div className="rp-msg-sender">
                     {m.role === "bot" ? "CheckMail" : "Vous"}
                   </div>
+                  {/* rp-bub handles bubble styling for both bot and user via CSS */}
                   <div
                     className="rp-bub"
                     dangerouslySetInnerHTML={{ __html: parseMarkdown(m.text) }}
@@ -555,10 +961,7 @@ export default function Results({ emlData, onBack }) {
                         <button
                           key={j}
                           className="rp-chip"
-                          onClick={() => {
-                            setInput(c);
-                            setTimeout(() => sendMessage(), 100);
-                          }}
+                          onClick={() => sendMessage(c)}
                         >
                           {c}
                         </button>
@@ -573,9 +976,6 @@ export default function Results({ emlData, onBack }) {
           {typing && (
             <div className="rp-msg bot">
               <div className="rp-msg-inner">
-                <div className="rp-msg-avatar">
-                  <BotIcon />
-                </div>
                 <div className="rp-msg-content">
                   <div className="rp-msg-sender">CheckMail</div>
                   <div className="rp-tdots">
@@ -597,7 +997,7 @@ export default function Results({ emlData, onBack }) {
               disabled={busy}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              placeholder="Posez votre question sur cet email…"
+              placeholder="Posez votre question…"
             />
             <button
               className="rp-send"
