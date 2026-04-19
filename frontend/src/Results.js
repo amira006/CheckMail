@@ -1,13 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import "./Results.css";
 import { saveAnalysis, checkIfEmailSaved } from "./emailService";
 import { saveMessage, getChatHistory } from "./chatService";
 import { getToken } from "./authService";
-
-// ============================================================
-// 🛠️ HELPERS
-// ============================================================
 
 function decodeMimeHeader(str) {
   if (!str) return str;
@@ -47,10 +43,6 @@ function parseMarkdown(text) {
     .replace(/(<br\/>){2,}/g, "<br/>");
 }
 
-// ============================================================
-// ✅ CONSENT API HELPER
-// ============================================================
-
 const saveConsentToDB = async (consent) => {
   const token = getToken();
   if (!token) return;
@@ -65,10 +57,6 @@ const saveConsentToDB = async (consent) => {
     });
   } catch {}
 };
-
-// ============================================================
-// 🪙 TOKEN HELPERS
-// ============================================================
 
 const deductChatToken = async () => {
   const token = getToken();
@@ -98,36 +86,32 @@ const deductPdfToken = async () => {
   }
 };
 
-// ============================================================
-// 🎨 SUB-COMPONENTS
-// ============================================================
-
 function ScoreRing({ score, color }) {
-  const r = 42;
+  const r = 56;
   const circ = 2 * Math.PI * r;
   const offset = circ - (score / 100) * circ;
   return (
     <svg
-      width="110"
-      height="110"
-      viewBox="0 0 110 110"
+      width="140"
+      height="140"
+      viewBox="0 0 140 140"
       style={{ transform: "rotate(-90deg)" }}
     >
       <circle
-        cx="55"
-        cy="55"
+        cx="70"
+        cy="70"
         r={r}
         fill="none"
         stroke="#f1f5f9"
-        strokeWidth="8"
+        strokeWidth="10"
       />
       <circle
-        cx="55"
-        cy="55"
+        cx="70"
+        cy="70"
         r={r}
         fill="none"
         stroke={color}
-        strokeWidth="8"
+        strokeWidth="10"
         strokeDasharray={circ}
         strokeDashoffset={offset}
         strokeLinecap="round"
@@ -175,11 +159,9 @@ function TokenBadge({ tokens }) {
   if (tokens === null || tokens === undefined) return null;
   const isUnlimited = tokens === "illimité";
   const isLow = !isUnlimited && tokens <= 20;
-
   let cls = "rp-token-badge";
   if (isUnlimited) cls += " unlimited";
   else if (isLow) cls += " low";
-
   return (
     <div className={cls}>
       <span
@@ -197,17 +179,12 @@ function TokenBadge({ tokens }) {
   );
 }
 
-// ============================================================
-// ✅ CONSENT MODAL
-// ============================================================
-
 function ConsentModal({ onAccept, onDecline }) {
   const items = [
     "Expéditeur et objet de l'email",
     "Score de sécurité et verdict",
     "Liens et pièces jointes détectés",
   ];
-
   return (
     <div
       style={{
@@ -256,7 +233,6 @@ function ConsentModal({ onAccept, onDecline }) {
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           </svg>
         </div>
-
         <h2
           style={{
             fontSize: 17,
@@ -279,7 +255,6 @@ function ConsentModal({ onAccept, onDecline }) {
           améliorer la détection des menaces. Aucun contenu de l'email ne sera
           stocké.
         </p>
-
         <div
           style={{
             background: "#f8fafc",
@@ -350,7 +325,6 @@ function ConsentModal({ onAccept, onDecline }) {
             ))}
           </div>
         </div>
-
         <div style={{ display: "flex", gap: 8 }}>
           <button
             onClick={onDecline}
@@ -365,8 +339,6 @@ function ConsentModal({ onAccept, onDecline }) {
               background: "#fff",
               color: "#374151",
             }}
-            onMouseOver={(e) => (e.currentTarget.style.background = "#f8fafc")}
-            onMouseOut={(e) => (e.currentTarget.style.background = "#fff")}
           >
             Refuser
           </button>
@@ -383,13 +355,10 @@ function ConsentModal({ onAccept, onDecline }) {
               background: "#2563EB",
               color: "#fff",
             }}
-            onMouseOver={(e) => (e.currentTarget.style.background = "#1E40AF")}
-            onMouseOut={(e) => (e.currentTarget.style.background = "#2563EB")}
           >
             Autoriser
           </button>
         </div>
-
         <p
           style={{
             fontSize: 11,
@@ -405,12 +374,12 @@ function ConsentModal({ onAccept, onDecline }) {
   );
 }
 
-// ============================================================
-// 🚀 MAIN COMPONENT
-// ============================================================
-
-export default function Results({ emlData, onBack }) {
+export default function Results({ emlData: emlDataProp, onBack }) {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const emlData = emlDataProp || location.state?.emlData;
+  const reportFromHistory = location.state?.reportFromHistory;
 
   const [report, setReport] = useState(null);
   const [msgs, setMsgs] = useState([]);
@@ -421,7 +390,6 @@ export default function Results({ emlData, onBack }) {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [emailId, setEmailId] = useState(null);
   const [userTokens, setUserTokens] = useState(null);
-
   const [showConsent, setShowConsent] = useState(false);
   const [pendingReport, setPendingReport] = useState(null);
   const [pendingMeta, setPendingMeta] = useState(null);
@@ -446,8 +414,14 @@ export default function Results({ emlData, onBack }) {
           .length,
         file: emlData?.name || "—",
       }
-    : {};
-
+    : {
+        from: reportFromHistory?.senderEmail || "—",
+        subject: reportFromHistory?.subject || emlData?.name || "—",
+        date: "—",
+        links: 0,
+        attach: 0,
+        file: emlData?.name || "—",
+      };
   useEffect(() => {
     if (msgsRef.current && msgs.length > 0) msgsRef.current.scrollTop = 0;
   }, [emailId]);
@@ -458,19 +432,83 @@ export default function Results({ emlData, onBack }) {
   }, [msgs]);
 
   useEffect(() => {
-    if (!emlData?.content) {
-      setMsgs([
-        {
+    const init = async () => {
+      if (reportFromHistory) {
+        setReport(reportFromHistory);
+
+        const welcomeMsg = {
           role: "bot",
-          text: "Aucun email chargé. Retournez importer un fichier .eml.",
-          chips: [],
-        },
-      ]);
-      setBusy(false);
-      return;
-    }
-    runAnalysis();
-  }, []); // eslint-disable-line
+          text: `Bonjour ! 👋 Voici le rapport de l'email **${
+            emlData?.name || ""
+          }**.\n\n- Score : **${reportFromHistory.score}/100**\n- Verdict : **${
+            reportFromHistory.verdict === "SAFE"
+              ? "Email sûr"
+              : reportFromHistory.verdict === "DANGEROUS"
+              ? "Dangereux"
+              : "Suspect"
+          }**\n\nPosez vos questions 👇`,
+          chips: ["Pourquoi ce verdict ?", "Détails techniques", "Que faire ?"],
+        };
+
+        const baseHistory = [
+          {
+            role: "user",
+            content: `[CTX] ${JSON.stringify(reportFromHistory)}`,
+          },
+          { role: "assistant", content: "Prêt." },
+        ];
+
+        if (reportFromHistory._id) {
+          try {
+            const oldMsgs = await getChatHistory(reportFromHistory._id);
+            if (oldMsgs?.length > 0) {
+              setMsgs([
+                welcomeMsg,
+                ...oldMsgs.map((m) => ({
+                  role: m.role === "user" ? "user" : "bot",
+                  text: m.content,
+                  chips: [],
+                })),
+              ]);
+              setHistory([
+                ...baseHistory,
+                ...oldMsgs.map((m) => ({
+                  role: m.role === "user" ? "user" : "assistant",
+                  content: m.content,
+                })),
+              ]);
+              setEmailId(reportFromHistory._id);
+              setBusy(false);
+              setTyping(false);
+              return;
+            }
+          } catch {}
+        }
+
+        setMsgs([welcomeMsg]);
+        setHistory(baseHistory);
+        setEmailId(reportFromHistory._id || null);
+        setBusy(false);
+        setTyping(false);
+        return;
+      }
+
+      if (emlData?.content) {
+        runAnalysis();
+      } else {
+        setMsgs([
+          {
+            role: "bot",
+            text: "Aucun email chargé. Retournez importer un fichier .eml.",
+            chips: [],
+          },
+        ]);
+        setBusy(false);
+      }
+    };
+
+    init();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const fetchTokens = async () => {
@@ -487,10 +525,6 @@ export default function Results({ emlData, onBack }) {
     fetchTokens();
   }, []);
 
-  // ============================================================
-  // ✅ SAVE ANALYSIS
-  // ============================================================
-
   const doSaveAnalysis = async (rep, metaData) => {
     try {
       const saved = await saveAnalysis(
@@ -501,7 +535,6 @@ export default function Results({ emlData, onBack }) {
       );
       const savedId = saved?.id || null;
       setEmailId(savedId);
-
       if (savedId) {
         const oldMsgs = await getChatHistory(savedId);
         if (oldMsgs?.length > 0) {
@@ -525,16 +558,11 @@ export default function Results({ emlData, onBack }) {
     } catch {}
   };
 
-  // ============================================================
-  // ✅ CONSENT HANDLERS
-  // ============================================================
-
   const handleConsentAccept = async () => {
     await saveConsentToDB(true);
     setShowConsent(false);
-    if (pendingReport && pendingMeta) {
+    if (pendingReport && pendingMeta)
       await doSaveAnalysis(pendingReport, pendingMeta);
-    }
     setPendingReport(null);
     setPendingMeta(null);
   };
@@ -545,10 +573,6 @@ export default function Results({ emlData, onBack }) {
     setPendingReport(null);
     setPendingMeta(null);
   };
-
-  // ============================================================
-  // 🔍 ANALYSIS
-  // ============================================================
 
   const runAnalysis = async () => {
     setTyping(true);
@@ -564,7 +588,6 @@ export default function Results({ emlData, onBack }) {
       });
       if (!res.ok) throw new Error(`Erreur ${res.status}`);
       const data = await res.json();
-
       if (data.error === "rate_limit") {
         navigate("/forfaits");
         return;
@@ -660,13 +683,11 @@ export default function Results({ emlData, onBack }) {
       const welcomeText = rep
         ? `Bonjour ! 👋 J'ai analysé votre email **${
             emlData?.name || ""
-          }**.\n\n` +
-          `Voici ce que j'ai trouvé :\n` +
-          `- Score de sécurité : **${sc}/100**\n` +
-          `- Verdict : **${vLabel}**\n` +
-          `- ${rep.summary || ""}\n\n` +
-          (extraMsg ? `${extraMsg}\n\n` : "") +
-          `Posez-moi vos questions sur cet email 👇`
+          }**.\n\nVoici ce que j'ai trouvé :\n- Score de sécurité : **${sc}/100**\n- Verdict : **${vLabel}**\n- ${
+            rep.summary || ""
+          }\n\n${
+            extraMsg ? `${extraMsg}\n\n` : ""
+          }Posez-moi vos questions sur cet email 👇`
         : `Bonjour ! L'analyse est terminée. Posez-moi vos questions 👇`;
 
       setTyping(false);
@@ -674,17 +695,11 @@ export default function Results({ emlData, onBack }) {
       setMsgs([{ role: "bot", text: welcomeText, chips }]);
       setHistory(baseContext);
 
-      // ============================================================
-      // ✅ CONSENT LOGIC
-      // checkIfEmailSaved importé de emailService — même hash garanti
-      // ============================================================
       if (rep) {
         const alreadySaved = await checkIfEmailSaved(emlData.content);
         if (alreadySaved) {
-          // Email deja sauvegardé → pas de modal
           await doSaveAnalysis(rep, meta);
         } else {
-          // Email nouveau → afficher modal
           setPendingReport(rep);
           setPendingMeta(meta);
           setTimeout(() => setShowConsent(true), 1200);
@@ -702,10 +717,6 @@ export default function Results({ emlData, onBack }) {
       ]);
     }
   };
-
-  // ============================================================
-  // 💬 SEND MESSAGE
-  // ============================================================
 
   const sendMessage = useCallback(
     async (overrideText) => {
@@ -748,7 +759,6 @@ export default function Results({ emlData, onBack }) {
         if (!res.ok) throw new Error(`Erreur ${res.status}`);
         const data = await res.json();
         const reply = data.reply || "Désolé, veuillez réessayer.";
-
         if (reply === "__RATE_LIMIT__") {
           setTyping(false);
           navigate("/forfaits");
@@ -758,7 +768,6 @@ export default function Results({ emlData, onBack }) {
         setTyping(false);
         setMsgs((p) => [...p, { role: "bot", text: reply, chips: [] }]);
         setHistory((p) => [...p, { role: "assistant", content: reply }]);
-
         if (emailId) {
           saveMessage(emailId, "user", text);
           saveMessage(emailId, "assistant", reply);
@@ -774,14 +783,9 @@ export default function Results({ emlData, onBack }) {
     [input, typing, report, history, emlData, emailId, navigate]
   );
 
-  // ============================================================
-  // 📄 PDF DOWNLOAD
-  // ============================================================
-
   const downloadPDF = async () => {
     if (!report) return alert("L'analyse n'est pas encore terminée.");
     setPdfBusy(true);
-
     const tokenResult = await deductPdfToken();
     if (tokenResult && !tokenResult.success) {
       setPdfBusy(false);
@@ -790,7 +794,6 @@ export default function Results({ emlData, onBack }) {
     }
     if (tokenResult?.data?.tokens !== undefined)
       setUserTokens(tokenResult.data.tokens);
-
     try {
       const res = await fetch("/api/report/export", {
         method: "POST",
@@ -812,10 +815,6 @@ export default function Results({ emlData, onBack }) {
     }
   };
 
-  // ============================================================
-  // 🎨 RENDER
-  // ============================================================
-
   const score = report?.score ?? null;
   const ringColor =
     score === null
@@ -825,7 +824,6 @@ export default function Results({ emlData, onBack }) {
       : score >= 40
       ? "#f59e0b"
       : "#ef4444";
-
   const VM = {
     SAFE: { cls: "safe", label: "Email sûr" },
     SUSPICIOUS: { cls: "warn", label: "Suspect" },
@@ -926,8 +924,7 @@ export default function Results({ emlData, onBack }) {
 
       <div className="rp-chat">
         <div className="rp-chat-topbar">
-          <BotIcon size={60} />
-
+          <BotIcon size={50} />
           <div className="rp-chat-topbar-info">
             <h3>CheckMail</h3>
             <p>
@@ -950,7 +947,6 @@ export default function Results({ emlData, onBack }) {
                   <div className="rp-msg-sender">
                     {m.role === "bot" ? "CheckMail" : "Vous"}
                   </div>
-                  {/* rp-bub handles bubble styling for both bot and user via CSS */}
                   <div
                     className="rp-bub"
                     dangerouslySetInnerHTML={{ __html: parseMarkdown(m.text) }}
@@ -972,7 +968,6 @@ export default function Results({ emlData, onBack }) {
               </div>
             </div>
           ))}
-
           {typing && (
             <div className="rp-msg bot">
               <div className="rp-msg-inner">
