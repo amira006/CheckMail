@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import "./Results.css";
 import { saveAnalysis, checkIfEmailSaved } from "./emailService";
 import { saveMessage, getChatHistory } from "./chatService";
-import { getToken } from "./authService";
+import { getToken, getUser } from "./authService";
 
 function decodeMimeHeader(str) {
   if (!str) return str;
@@ -398,6 +398,7 @@ export default function Results({ emlData: emlDataProp, onBack }) {
 
   const meta = emlData?.content
     ? {
+        user: getUser()?.name || "Utilisateur",
         from: decodeMimeHeader(
           (emlData.content.match(/^From:\s*(.+)$/im) || [])[1] || "—"
         ),
@@ -415,12 +416,13 @@ export default function Results({ emlData: emlDataProp, onBack }) {
         file: emlData?.name || "—",
       }
     : {
-        from: reportFromHistory?.senderEmail || "—",
+        user: getUser()?.name || "Utilisateur",
+        from: reportFromHistory?.senderEmail || emlData?.senderEmail || "—",
         subject: reportFromHistory?.subject || emlData?.name || "—",
-        date: "—",
-        links: 0,
+        date: reportFromHistory?.date || "—",
+        links: reportFromHistory?.urls?.length || 0,
         attach: 0,
-        file: emlData?.name || "—",
+        file: emlData?.filename || reportFromHistory?.filename || "—",
       };
   useEffect(() => {
     if (msgsRef.current && msgs.length > 0) msgsRef.current.scrollTop = 0;
